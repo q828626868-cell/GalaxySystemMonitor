@@ -118,11 +118,13 @@ minSdk 設為 31，原因是 Widget 目標格數設定（`targetCellWidth`／`ta
 
 ### 取得 APK
 
-目前**尚未發布預先建置的 APK**，也還沒有 GitHub Releases。請依照[從原始碼建置](#從原始碼建置)自行產生 Debug APK。
+到 [GitHub Releases](https://github.com/q828626868-cell/GalaxySystemMonitor/releases) 下載最新版本的 APK（例如 `GalaxySystemMonitor-v1.0.0-debug.apk`）。也可以依照[從原始碼建置](#從原始碼建置)自行產生。
+
+> 目前發布的是以 Android 預設偵錯金鑰簽署的 **Debug 版本**，尚未設定正式的 Release 簽署。每個 Release 頁面都附有 APK 的 SHA-256 雜湊值，可用來確認檔案完整性。
 
 ### 方法一：直接安裝到手機
 
-1. 將 `app-debug.apk` 複製到手機。
+1. 在手機上直接從 Releases 頁面下載 APK，或將 APK 複製到手機。
 2. 在手機上開啟該檔案。若系統詢問，請允許此來源「安裝未知應用程式」。
 3. 依畫面指示完成安裝。
 
@@ -135,8 +137,9 @@ ADB 不是使用本 App 的必要條件，只是從電腦安裝時較方便。
 3. 執行：
 
 ```bash
-adb devices                                          # 確認裝置已連線
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb devices                                              # 確認裝置已連線
+adb install -r GalaxySystemMonitor-v1.0.0-debug.apk      # 從 Releases 下載的檔案
+# 或自行建置的檔案：adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ## 從原始碼建置
@@ -219,7 +222,8 @@ app/src/main/java/com/galaxy/systemmonitor/
 - App 未執行時發生的網路變化，只能在下次取樣時才偵測到。
 - Android 16 以上可能延後傳送「只有溫度變化」的電池廣播，因此溫度更新可能略有延遲。
 - 介面目前只有繁體中文。
-- 尚未實作：Release 簽署、預先建置的 APK 發布、網路延遲測試、通知提醒、資料匯出。
+- 發布的 APK 為 Debug 版本（偵錯金鑰簽署、未經程式碼縮減），不適合上架商店。
+- 尚未實作：正式 Release 簽署、網路延遲測試、通知提醒、資料匯出。
 
 ## 開發者與授權
 

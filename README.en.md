@@ -118,11 +118,13 @@ minSdk is 31 because the widget target-cell attributes (`targetCellWidth` / `tar
 
 ### Getting the APK
 
-There is **no pre-built APK and no GitHub Release yet**. Build a debug APK yourself as described in [Building from Source](#building-from-source).
+Download the latest APK (for example `GalaxySystemMonitor-v1.0.0-debug.apk`) from [GitHub Releases](https://github.com/q828626868-cell/GalaxySystemMonitor/releases), or build it yourself as described in [Building from Source](#building-from-source).
+
+> The published APK is a **debug build** signed with Android's default debug key; no release signing is configured yet. Each Release page lists the APK's SHA-256 hash so you can verify the file.
 
 ### Option 1: Install directly on the phone
 
-1. Copy `app-debug.apk` to the phone.
+1. Download the APK from the Releases page on the phone, or copy it to the phone.
 2. Open the file on the phone. If prompted, allow "Install unknown apps" for that source.
 3. Follow the on-screen instructions.
 
@@ -135,8 +137,9 @@ ADB is not required to use the app; it is just a convenient way to install from 
 3. Run:
 
 ```bash
-adb devices                                          # confirm the device is connected
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb devices                                              # confirm the device is connected
+adb install -r GalaxySystemMonitor-v1.0.0-debug.apk      # file downloaded from Releases
+# or a locally built file: adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ## Building from Source
@@ -219,7 +222,8 @@ All of these tests pass on an Android emulator.
 - Network changes that occur while the app process is not running are only detected at the next sample.
 - Android 16 and later may delay battery broadcasts that only change the temperature, so temperature updates can lag slightly.
 - The UI is currently available in Traditional Chinese only.
-- Not yet implemented: release signing, published pre-built APKs, network latency testing, notifications, data export.
+- The published APK is a debug build (debug-key signed, not minified) and is not suitable for app-store distribution.
+- Not yet implemented: proper release signing, network latency testing, notifications, data export.
 
 ## Developer and License
 
