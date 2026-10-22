@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Galaxy System Monitor</string>
+    <string name="widget_small_label">系統監控（小）</string>
+    <string name="widget_large_label">系統監控（大）</string>
+    <string name="widget_small_description">電量、溫度、耗電速度與網路狀態</string>
+    <string name="widget_large_description">電池、記憶體、儲存空間、網路與 24 小時電量趨勢</string>
+    <string name="widget_preview_title">Galaxy Monitor</string>
+</resources>

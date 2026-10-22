@@ -1,0 +1,187 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "44c452c2fff2a5128cdcd9711a0ed879",
+    "entities": [
+      {
+        "tableName": "samples",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `source` TEXT NOT NULL, `battery_level` INTEGER, `battery_temperatureDeciC` INTEGER, `battery_voltageMv` INTEGER, `battery_status` TEXT, `battery_plugType` TEXT, `battery_health` TEXT, `memory_totalBytes` INTEGER, `memory_availableBytes` INTEGER, `memory_lowMemory` INTEGER, `storage_totalBytes` INTEGER, `storage_freeBytes` INTEGER, `network_connected` INTEGER, `network_transport` TEXT, `network_validated` INTEGER, `network_metered` INTEGER)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "battery.level",
+            "columnName": "battery_level",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "battery.temperatureDeciC",
+            "columnName": "battery_temperatureDeciC",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "battery.voltageMv",
+            "columnName": "battery_voltageMv",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "battery.status",
+            "columnName": "battery_status",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "battery.plugType",
+            "columnName": "battery_plugType",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "battery.health",
+            "columnName": "battery_health",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "memory.totalBytes",
+            "columnName": "memory_totalBytes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "memory.availableBytes",
+            "columnName": "memory_availableBytes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "memory.lowMemory",
+            "columnName": "memory_lowMemory",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "storage.totalBytes",
+            "columnName": "storage_totalBytes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "storage.freeBytes",
+            "columnName": "storage_freeBytes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "network.connected",
+            "columnName": "network_connected",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "network.transport",
+            "columnName": "network_transport",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "network.validated",
+            "columnName": "network_validated",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "network.metered",
+            "columnName": "network_metered",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_samples_timestamp",
+            "unique": false,
+            "columnNames": [
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_samples_timestamp` ON `${TABLE_NAME}` (`timestamp`)"
+          }
+        ]
+      },
+      {
+        "tableName": "network_events",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `connected` INTEGER NOT NULL, `transport` TEXT NOT NULL, `validated` INTEGER, `detectedBy` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "connected",
+            "columnName": "connected",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "transport",
+            "columnName": "transport",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "validated",
+            "columnName": "validated",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "detectedBy",
+            "columnName": "detectedBy",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_network_events_timestamp",
+            "unique": false,
+            "columnNames": [
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_network_events_timestamp` ON `${TABLE_NAME}` (`timestamp`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '44c452c2fff2a5128cdcd9711a0ed879')"
+    ]
+  }
+}
