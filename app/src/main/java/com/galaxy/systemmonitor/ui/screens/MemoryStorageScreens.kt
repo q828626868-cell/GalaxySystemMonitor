@@ -2,6 +2,7 @@ package com.galaxy.systemmonitor.ui.screens
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
+import com.galaxy.systemmonitor.ui.components.DataSource
 import com.galaxy.systemmonitor.ui.components.Caption
 import com.galaxy.systemmonitor.ui.components.HeroCard
 import com.galaxy.systemmonitor.ui.components.HeroLabel
@@ -63,7 +64,7 @@ fun MemoryScreen(vm: MonitorViewModel, onBack: () -> Unit) {
                         RingGauge(m.usedFraction.toFloat(), MaterialTheme.colorScheme.secondary, centerText = Format.percent(m.usedFraction))
                     },
                 ) {
-                    HeroLabel("系統記憶體使用中")
+                    HeroLabel("系統記憶體使用中", DataSource.ESTIMATED)
                     HeroValue(Format.bytes(m.usedBytes), large = false)
                     HeroSubtitle("共 ${Format.bytes(m.totalBytes)}（整台裝置）")
                     HeroPills {
@@ -76,19 +77,20 @@ fun MemoryScreen(vm: MonitorViewModel, onBack: () -> Unit) {
             }
             item {
                 StatRow {
-                    StatTile(Modifier.weight(1f), "可用", Format.bytes(m.availableBytes)) {
+                    StatTile(Modifier.weight(1f), "可用", Format.bytes(m.availableBytes), source = DataSource.MEASURED) {
                         UsageBar((1 - m.usedFraction).toFloat(), status.good)
                     }
                     StatTile(
                         Modifier.weight(1f), "低記憶體門檻",
                         m.lowMemoryThresholdBytes?.let { Format.bytes(it) } ?: Format.UNAVAILABLE,
+                        source = DataSource.MEASURED,
                     ) { Caption("可用量低於此值時系統開始回收") }
                 }
             }
         }
         item { RangeSelector(range, { range = it }) }
         item {
-            SectionCard(title = "記憶體使用比例（%）") {
+            SectionCard(title = "記憶體使用比例（%）", source = DataSource.ESTIMATED) {
                 TimeSeriesChart(
                     points = chart, start = start, end = now,
                     gapMillis = Series.gapThreshold(settings.sampleIntervalMinutes),
@@ -137,7 +139,7 @@ fun StorageScreen(vm: MonitorViewModel, onBack: () -> Unit) {
             item {
                 val accent = if (low) status.warn else MaterialTheme.colorScheme.primary
                 HeroCard(trailing = { RingGauge(s.usedFraction.toFloat(), accent, centerText = Format.percent(s.usedFraction)) }) {
-                    HeroLabel("內部儲存空間剩餘")
+                    HeroLabel("內部儲存空間剩餘", DataSource.MEASURED)
                     HeroValue(Format.bytes(s.freeBytes), if (low) status.warn else MaterialTheme.colorScheme.onPrimaryContainer, large = false)
                     HeroSubtitle("共 ${Format.bytes(s.totalBytes)}")
                     HeroPills { HeroPill(if (low) "空間偏低" else "空間充足", if (low) status.warn else status.good) }
@@ -147,10 +149,10 @@ fun StorageScreen(vm: MonitorViewModel, onBack: () -> Unit) {
             item {
                 val accent = if (low) status.warn else MaterialTheme.colorScheme.primary
                 StatRow {
-                    StatTile(Modifier.weight(1f), "已使用（含系統）", Format.bytes(s.usedBytes)) {
+                    StatTile(Modifier.weight(1f), "已使用（含系統）", Format.bytes(s.usedBytes), source = DataSource.DERIVED) {
                         UsageBar(s.usedFraction.toFloat(), accent)
                     }
-                    StatTile(Modifier.weight(1f), "剩餘比例", Format.percent(s.freeFraction)) {
+                    StatTile(Modifier.weight(1f), "剩餘比例", Format.percent(s.freeFraction), source = DataSource.DERIVED) {
                         UsageBar(s.freeFraction.toFloat(), status.good)
                     }
                 }
@@ -158,7 +160,7 @@ fun StorageScreen(vm: MonitorViewModel, onBack: () -> Unit) {
         }
         item { RangeSelector(range, { range = it }) }
         item {
-            SectionCard(title = "剩餘空間（GB）") {
+            SectionCard(title = "剩餘空間（GB）", source = DataSource.MEASURED) {
                 TimeSeriesChart(
                     points = chart, start = start, end = now,
                     gapMillis = Series.gapThreshold(settings.sampleIntervalMinutes),

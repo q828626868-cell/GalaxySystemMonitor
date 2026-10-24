@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.galaxy.systemmonitor.ui.components.DataSource
 import com.galaxy.systemmonitor.ui.components.Caption
 import com.galaxy.systemmonitor.ui.components.StatColumn
 import androidx.compose.foundation.layout.Row
@@ -79,13 +80,13 @@ fun HistoryScreen(vm: MonitorViewModel, onBack: (() -> Unit)?) {
         }
         item { RangeSelector(range, { range = it }) }
         item {
-            SectionCard(title = "電量（%）") {
+            SectionCard(title = "電量（%）", source = DataSource.MEASURED) {
                 TimeSeriesChart(level, start, now, gap, MaterialTheme.colorScheme.primary, "%", fixedMin = 0f, fixedMax = 100f)
                 ChartCoverage(level, start, now)
             }
         }
         item {
-            SectionCard(title = "電池溫度（°C）") {
+            SectionCard(title = "電池溫度（°C）", source = DataSource.MEASURED) {
                 TimeSeriesChart(
                     temp, start, now, gap, MaterialTheme.colorScheme.tertiary, "°C",
                     valueFormat = { String.format(Locale.US, "%.1f", it) },
@@ -94,7 +95,7 @@ fun HistoryScreen(vm: MonitorViewModel, onBack: (() -> Unit)?) {
             }
         }
         item {
-            SectionCard(title = "記憶體使用比例（%）") {
+            SectionCard(title = "記憶體使用比例（%）", source = DataSource.ESTIMATED) {
                 TimeSeriesChart(memory, start, now, gap, MaterialTheme.colorScheme.secondary, "%", fixedMin = 0f, fixedMax = 100f)
                 ChartCoverage(memory, start, now)
             }

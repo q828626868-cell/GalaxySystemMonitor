@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
+import com.galaxy.systemmonitor.ui.components.DataSource
 import com.galaxy.systemmonitor.ui.components.Caption
 import com.galaxy.systemmonitor.ui.components.HeroCard
 import com.galaxy.systemmonitor.ui.components.HeroLabel
@@ -71,7 +72,7 @@ fun TemperatureScreen(vm: MonitorViewModel, onBack: () -> Unit) {
                     RingGauge(t?.let { (it / (settings.tempHighC + 10)).toFloat() }, color, centerText = level.label)
                 },
             ) {
-                HeroLabel("目前溫度")
+                HeroLabel("目前溫度", DataSource.MEASURED)
                 HeroValue(Format.temperature(t), color)
                 live?.let { HeroSubtitle("更新於 ${Format.dateTime(it.timestamp)}") }
                 HeroPills {
@@ -81,7 +82,7 @@ fun TemperatureScreen(vm: MonitorViewModel, onBack: () -> Unit) {
             }
         }
         item {
-            SectionCard(title = "近期變化") {
+            SectionCard(title = "近期變化", source = DataSource.DERIVED) {
                 val windows = listOf(TimeRange.H1, TimeRange.H6, TimeRange.H24)
                     .map { it to TemperatureAnalyzer.windowStats(points, now, it.millis) }
                 Row(Modifier.fillMaxWidth()) {
@@ -118,17 +119,19 @@ fun TemperatureScreen(vm: MonitorViewModel, onBack: () -> Unit) {
                     Modifier.weight(1f), "保存期間最高",
                     maxT?.let { Format.temperature(it.value / 10.0) } ?: "—",
                     valueColor = status.warn,
+                    source = DataSource.MEASURED,
                 ) { Caption(maxT?.let { Format.fullDateTime(it.timestamp) } ?: "尚無紀錄") }
                 StatTile(
                     Modifier.weight(1f), "保存期間最低",
                     minT?.let { Format.temperature(it.value / 10.0) } ?: "—",
                     valueColor = MaterialTheme.colorScheme.secondary,
+                    source = DataSource.MEASURED,
                 ) { Caption(minT?.let { Format.fullDateTime(it.timestamp) } ?: "尚無紀錄") }
             }
         }
         item { RangeSelector(range, { range = it }) }
         item {
-            SectionCard(title = "溫度趨勢（°C）") {
+            SectionCard(title = "溫度趨勢（°C）", source = DataSource.MEASURED) {
                 TimeSeriesChart(
                     points = chart, start = start, end = now,
                     gapMillis = Series.gapThreshold(settings.sampleIntervalMinutes),

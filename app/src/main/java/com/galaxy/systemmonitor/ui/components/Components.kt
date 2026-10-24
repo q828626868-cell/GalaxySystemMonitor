@@ -53,7 +53,8 @@ import androidx.compose.foundation.layout.width
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenScaffold(
-    title: String,
+    /** null = no app bar at all (the screen draws its own compact header). */
+    title: String?,
     onBack: (() -> Unit)?,
     actions: @Composable RowScope.() -> Unit = {},
     content: LazyListScope.() -> Unit,
@@ -61,9 +62,11 @@ fun ScreenScaffold(
     // Large title that collapses into a normal app bar while scrolling.
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
-        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
+        // Without an app bar the collapse behavior would swallow every scroll gesture.
+        modifier = if (title != null) Modifier.nestedScroll(scroll.nestedScrollConnection) else Modifier,
         containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
+        topBar = topBar@{
+            if (title == null) return@topBar
             MediumTopAppBar(
                 title = { Text(title, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 scrollBehavior = scroll,
@@ -96,6 +99,8 @@ fun SectionCard(
     modifier: Modifier = Modifier,
     title: String? = null,
     onClick: (() -> Unit)? = null,
+    /** Tag shown at the right of the title when the whole card shares one data source. */
+    source: DataSource? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
@@ -103,13 +108,16 @@ fun SectionCard(
     val body: @Composable ColumnScope.() -> Unit = {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (title != null) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 2.dp),
-                )
+                Row(Modifier.padding(bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f),
+                    )
+                    source?.let { SourceTag(it) }
+                }
             }
             content()
         }

@@ -38,6 +38,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.galaxy.systemmonitor.data.model.Reading
 import com.galaxy.systemmonitor.ui.AppUsageViewModel
 import com.galaxy.systemmonitor.ui.UsageRange
+import com.galaxy.systemmonitor.ui.components.DataSource
 import com.galaxy.systemmonitor.ui.components.ChoiceChips
 import com.galaxy.systemmonitor.ui.components.HeroCard
 import com.galaxy.systemmonitor.ui.components.HeroLabel
@@ -93,7 +94,7 @@ fun AppUsageScreen(onBack: () -> Unit, vm: AppUsageViewModel = viewModel(factory
                     val list = reading.value
                     item {
                         HeroCard {
-                            HeroLabel("App 前景使用時間 · ${state.range.label}")
+                            HeroLabel("App 前景使用時間 · ${state.range.label}", DataSource.DERIVED)
                             HeroValue(Format.duration(list.sumOf { it.millis }), large = false)
                             HeroPills {
                                 HeroPill("${list.size} 個 App")
@@ -105,7 +106,7 @@ fun AppUsageScreen(onBack: () -> Unit, vm: AppUsageViewModel = viewModel(factory
                         item { SectionCard { UnavailableText("此區間沒有使用紀錄") } }
                     } else {
                         item {
-                            SectionCard(title = "依使用時間排序") {
+                            SectionCard(title = "依使用時間排序", source = DataSource.DERIVED) {
                                 val max = list.first().millis.coerceAtLeast(1)
                                 list.take(MAX_ROWS).forEach { app ->
                                     AppRow(vm, app.packageName, app.label, if (app.millis < 60_000) "不到 1 分" else Format.duration(app.millis), null, app.millis.toFloat() / max)
@@ -129,7 +130,7 @@ fun AppUsageScreen(onBack: () -> Unit, vm: AppUsageViewModel = viewModel(factory
                     val list = reading.value
                     item {
                         HeroCard {
-                            HeroLabel("網路流量 · ${state.range.label}")
+                            HeroLabel("網路流量 · ${state.range.label}", DataSource.ESTIMATED)
                             HeroValue(Format.bytes(list.sumOf { it.totalBytes }), large = false)
                             HeroPills {
                                 HeroPill("Wi-Fi ${Format.bytes(list.sumOf { it.wifiBytes })}")
@@ -142,7 +143,7 @@ fun AppUsageScreen(onBack: () -> Unit, vm: AppUsageViewModel = viewModel(factory
                         item { SectionCard { UnavailableText("此區間沒有流量紀錄") } }
                     } else {
                         item {
-                            SectionCard(title = "依流量排序") {
+                            SectionCard(title = "依流量排序", source = DataSource.ESTIMATED) {
                                 val max = list.first().totalBytes.coerceAtLeast(1)
                                 list.take(MAX_ROWS).forEach { t ->
                                     AppRow(

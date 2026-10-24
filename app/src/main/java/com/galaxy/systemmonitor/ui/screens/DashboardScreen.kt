@@ -53,11 +53,16 @@ import com.galaxy.systemmonitor.data.model.BatteryInfo
 import com.galaxy.systemmonitor.data.model.ChargeStatus
 import com.galaxy.systemmonitor.data.model.unavailableReason
 import com.galaxy.systemmonitor.data.model.valueOrNull
-import com.galaxy.systemmonitor.domain.DrainSummary
+import com.galaxy.systemmonitor.data.model.ThermalStatus
+import com.galaxy.systemmonitor.data.source.BatteryParser
+import kotlin.math.roundToInt
 import com.galaxy.systemmonitor.domain.RateStatus
 import com.galaxy.systemmonitor.domain.TemperatureAnalyzer
 import com.galaxy.systemmonitor.ui.MonitorViewModel
 import com.galaxy.systemmonitor.ui.components.Caption
+import com.galaxy.systemmonitor.ui.components.DataSource
+import com.galaxy.systemmonitor.ui.components.SourceLegend
+import com.galaxy.systemmonitor.ui.components.SourceTag
 import com.galaxy.systemmonitor.ui.components.HeroCard
 import com.galaxy.systemmonitor.ui.components.HeroLabel
 import com.galaxy.systemmonitor.ui.components.HeroPill
@@ -92,27 +97,27 @@ fun DashboardScreen(vm: MonitorViewModel, onOpen: (String) -> Unit) {
     val device by vm.deviceInfo.collectAsStateWithLifecycle()
     val status = LocalStatusColors.current
 
-    ScreenScaffold(
-        title = "Galaxy System Monitor",
-        onBack = null,
-        actions = {
-            if (refreshing) {
-                CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(12.dp))
-            } else {
-                IconButton(onClick = { vm.refresh(manual = true) }) {
-                    Icon(Icons.Filled.Refresh, contentDescription = "重新整理")
+    val deviceLive by vm.deviceLive.collectAsStateWithLifecycle()
+
+    // No app bar: a single compact row keeps the screen for data.
+    ScreenScaffold(title = null, onBack = null) {
+        item {
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    live?.let { "最後更新 ${Format.dateTime(it.timestamp)}（${Format.relative(it.timestamp, now)}）" }
+                        ?: "讀取中…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                if (refreshing) {
+                    CircularProgressIndicator(Modifier.padding(12.dp).size(22.dp), strokeWidth = 2.dp)
+                } else {
+                    IconButton(onClick = { vm.refresh(manual = true) }) {
+                        Icon(Icons.Filled.Refresh, contentDescription = "重新整理")
+                    }
                 }
             }
-        },
-    ) {
-        item {
-            Text(
-                live?.let { "最後更新 ${Format.dateTime(it.timestamp)}（${Format.relative(it.timestamp, now)}）" }
-                    ?: "讀取中…",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
         dbError?.let { item { WarningBanner(it, status.danger) } }
         if (!settings.backgroundMonitoring) {
@@ -131,38 +136,91 @@ fun DashboardScreen(vm: MonitorViewModel, onOpen: (String) -> Unit) {
         }
 
         val snap = live
+        // Headline: live CPU frequency per core.
+        item {
+            val d = device
+            SectionCard(onClick = { onOpen(Destinations.DEVICE) }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            d?.let { it.socName ?: it.socModel } ?: "處理器",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Caption("CPU 即時頻率（GHz）")
+                            SourceTag(DataSource.MEASURED)
+                        }
+                    }
+                    deviceLive?.let { StatusChip(it.thermalStatus.label, thermalColor(it.thermalStatus)) }
+                }
+                if (d == null) UnavailableText("讀取中…") else CpuBars(d, deviceLive, barHeight = 120.dp, footnote = false)
+            }
+        }
+        // Battery: the figures the status bar does not show.
         item {
             val reading = snap?.battery
             val battery = reading?.valueOrNull()
-            if (battery == null) {
-                SectionCard(title = "電池", onClick = { onOpen(Destinations.BATTERY) }) {
+            SectionCard(title = "電池", onClick = { onOpen(Destinations.BATTERY) }) {
+                if (battery == null) {
                     UnavailableText(reading?.unavailableReason() ?: "讀取中…")
+                    return@SectionCard
                 }
-            } else {
-                BatteryHero(battery, power.latest?.powerW) {
-                    onOpen(Destinations.BATTERY)
+                val w = power.latest?.powerW
+                val tempLevel = TemperatureAnalyzer.classify(battery.temperatureC, settings.tempWarnC, settings.tempHighC)
+                val soh = battery.stateOfHealth.valueOrNull()
+                Row(Modifier.fillMaxWidth()) {
+                    StatColumn(
+                        Modifier.weight(1f), Format.watts(w),
+                        if (battery.pluggedIn == true) "功率 · 充電中" else "功率",
+                        source = DataSource.DERIVED,
+                        valueColor = if (w != null && w > 0) status.good else MaterialTheme.colorScheme.onSurface,
+                        dim = w == null,
+                    )
+                    StatColumn(
+                        Modifier.weight(1f).clickable { onOpen(Destinations.TEMPERATURE) },
+                        Format.temperature(battery.temperatureC), "溫度 · ${tempLevel.label}",
+                        source = DataSource.MEASURED,
+                        valueColor = status.forTemp(tempLevel),
+                    )
+                    StatColumn(
+                        Modifier.weight(1f), soh?.let { "$it%" } ?: "—",
+                        when {
+                            soh != null -> "健康度"
+                            battery.stateOfHealth.unavailableReason() == BatteryParser.SOH_PERMISSION_REASON -> "健康度 · 未授權"
+                            else -> "健康度 · 未提供"
+                        },
+                        dim = soh == null,
+                        source = DataSource.MEASURED,
+                    )
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                val d = drain
+                if (d == null) {
+                    Caption("耗電速度計算中…")
+                } else {
+                    Row(Modifier.fillMaxWidth()) {
+                        listOf("1 小時" to d.discharge1h, "6 小時" to d.discharge6h, "24 小時" to d.discharge24h)
+                            .forEach { (label, rate) ->
+                                StatColumn(Modifier.weight(1f), Format.rateShort(rate), "耗電 · $label", dim = rate.status != RateStatus.OK, source = DataSource.DERIVED)
+                            }
+                    }
                 }
             }
         }
-        item { DrainCard(drain) { onOpen(Destinations.BATTERY) } }
 
         // 2 × 2 quick stats
         item {
-            val battery = snap?.battery?.valueOrNull()
             val memory = snap?.memory?.valueOrNull()
             val storage = snap?.storage?.valueOrNull()
             val net = snap?.network?.valueOrNull()
-            val tempLevel = TemperatureAnalyzer.classify(battery?.temperatureC, settings.tempWarnC, settings.tempHighC)
             val lowStorage = storage != null && storage.freeFraction * 100 < settings.lowStoragePercent
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 StatRow {
                     StatTile(
-                        Modifier.weight(1f), "電池溫度", Format.temperature(battery?.temperatureC),
-                        onClick = { onOpen(Destinations.TEMPERATURE) },
-                    ) { StatusChip(tempLevel.label, status.forTemp(tempLevel)) }
-                    StatTile(
                         Modifier.weight(1f), "記憶體",
-                        memory?.let { Format.percent(it.usedFraction) } ?: Format.UNAVAILABLE,
+                        source = DataSource.ESTIMATED,
+                        value = memory?.let { Format.percent(it.usedFraction) } ?: Format.UNAVAILABLE,
                         onClick = { onOpen(Destinations.MEMORY) },
                     ) {
                         if (memory != null) {
@@ -172,11 +230,10 @@ fun DashboardScreen(vm: MonitorViewModel, onOpen: (String) -> Unit) {
                             Caption(snap?.memory?.unavailableReason() ?: "讀取中…")
                         }
                     }
-                }
-                StatRow {
                     StatTile(
                         Modifier.weight(1f), "儲存空間剩餘",
-                        storage?.let { Format.bytes(it.freeBytes) } ?: Format.UNAVAILABLE,
+                        source = DataSource.MEASURED,
+                        value = storage?.let { Format.bytes(it.freeBytes) } ?: Format.UNAVAILABLE,
                         valueColor = if (lowStorage) status.warn else MaterialTheme.colorScheme.onSurface,
                         onClick = { onOpen(Destinations.STORAGE) },
                     ) {
@@ -187,9 +244,12 @@ fun DashboardScreen(vm: MonitorViewModel, onOpen: (String) -> Unit) {
                             Caption(snap?.storage?.unavailableReason() ?: "讀取中…")
                         }
                     }
+                }
+                StatRow {
                     StatTile(
                         Modifier.weight(1f), "網路",
-                        net?.let { if (it.connected) it.transport.label else "無連線" } ?: Format.UNAVAILABLE,
+                        source = DataSource.MEASURED,
+                        value = net?.let { if (it.connected) it.transport.label else "無連線" } ?: Format.UNAVAILABLE,
                         onClick = { onOpen(Destinations.NETWORK) },
                     ) {
                         if (net != null) {
@@ -205,6 +265,22 @@ fun DashboardScreen(vm: MonitorViewModel, onOpen: (String) -> Unit) {
                             )
                         } else {
                             Caption(snap?.network?.unavailableReason() ?: "讀取中…")
+                        }
+                    }
+                    val dl = deviceLive
+                    val headroom = dl?.thermalHeadroom
+                    StatTile(
+                        Modifier.weight(1f), "散熱",
+                        source = DataSource.PREDICTED,
+                        value = headroom?.let { "${(it * 100).roundToInt()}%" } ?: dl?.thermalStatus?.label ?: "—",
+                        valueColor = dl?.let { thermalColor(it.thermalStatus) } ?: MaterialTheme.colorScheme.onSurface,
+                        onClick = { onOpen(Destinations.DEVICE) },
+                    ) {
+                        if (headroom != null) {
+                            UsageBar(headroom, thermalColor(dl.thermalStatus))
+                            Caption("熱負載 · ${dl.thermalStatus.label}")
+                        } else {
+                            Caption(dl?.let { "系統散熱狀態" } ?: "讀取中…")
                         }
                     }
                 }
@@ -226,6 +302,7 @@ fun DashboardScreen(vm: MonitorViewModel, onOpen: (String) -> Unit) {
                 ) { onOpen(Destinations.APP_USAGE) }
             }
         }
+        item { SourceLegend() }
     }
 }
 
@@ -242,7 +319,7 @@ internal fun BatteryHero(battery: BatteryInfo, powerW: Double?, onClick: (() -> 
         else -> MaterialTheme.colorScheme.primary
     }
     HeroCard(onClick = onClick, trailing = { RingGauge(level?.let { it / 100f }, ringColor) }) {
-        HeroLabel("目前電量")
+        HeroLabel("目前電量", DataSource.MEASURED)
         HeroValue(level?.let { "$it%" } ?: Format.UNAVAILABLE)
         HeroSubtitle(
             if (battery.pluggedIn == true) "${battery.status.label} · ${battery.plugType.label}" else battery.status.label,
@@ -255,18 +332,13 @@ internal fun BatteryHero(battery: BatteryInfo, powerW: Double?, onClick: (() -> 
 }
 
 @Composable
-private fun DrainCard(drain: DrainSummary?, onClick: () -> Unit) {
-    SectionCard(title = "平均耗電速度（放電期間）", onClick = onClick) {
-        if (drain == null) {
-            UnavailableText("計算中…")
-            return@SectionCard
-        }
-        Row(Modifier.fillMaxWidth()) {
-            listOf("1 小時" to drain.discharge1h, "6 小時" to drain.discharge6h, "24 小時" to drain.discharge24h)
-                .forEach { (label, rate) ->
-                    StatColumn(Modifier.weight(1f), Format.rateShort(rate), "最近 $label", dim = rate.status != RateStatus.OK)
-                }
-        }
+private fun thermalColor(s: ThermalStatus): Color {
+    val status = LocalStatusColors.current
+    return when (s) {
+        ThermalStatus.NONE -> status.good
+        ThermalStatus.LIGHT, ThermalStatus.MODERATE -> status.warn
+        ThermalStatus.UNKNOWN -> status.muted
+        else -> status.danger
     }
 }
 

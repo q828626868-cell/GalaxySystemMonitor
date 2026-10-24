@@ -72,13 +72,16 @@ fun HeroCard(
 }
 
 @Composable
-fun HeroLabel(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.labelLarge,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
-    )
+fun HeroLabel(text: String, source: DataSource? = null) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
+        )
+        source?.let { SourceTag(it) }
+    }
 }
 
 @Composable
@@ -166,10 +169,21 @@ fun StatTile(
     value: String,
     valueColor: Color = MaterialTheme.colorScheme.onSurface,
     onClick: (() -> Unit)? = null,
+    source: DataSource? = null,
     footer: @Composable () -> Unit = {},
 ) {
     SectionCard(modifier.fillMaxHeight(), onClick = onClick) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            source?.let { SourceTag(it) }
+        }
         Text(
             value,
             style = MaterialTheme.typography.headlineSmall,
@@ -184,7 +198,15 @@ fun StatTile(
 
 /** Value-over-caption block used for side-by-side figures inside a card. */
 @Composable
-fun StatColumn(modifier: Modifier, value: String, caption: String, valueColor: Color = MaterialTheme.colorScheme.onSurface, dim: Boolean = false) {
+fun StatColumn(
+    modifier: Modifier,
+    value: String,
+    caption: String,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface,
+    dim: Boolean = false,
+    /** Shown as a dot before the caption, for cards that mix sources. */
+    source: DataSource? = null,
+) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             value,
@@ -196,7 +218,10 @@ fun StatColumn(modifier: Modifier, value: String, caption: String, valueColor: C
             // Fixed height so dim placeholder text ("資料不足") lines up with real numbers.
             modifier = Modifier.height(30.dp).wrapContentHeight(Alignment.CenterVertically),
         )
-        Caption(caption)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            source?.let { SourceDot(it) }
+            Caption(caption)
+        }
     }
 }
 
@@ -210,5 +235,61 @@ fun StatusDot(text: String, color: Color) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(Modifier.size(8.dp).clip(CircleShape).background(color))
         Text(text, style = MaterialTheme.typography.labelMedium, color = color)
+    }
+}
+
+/** Where a number comes from, so readers can tell real readings from derived or estimated ones. */
+enum class DataSource(val label: String, val meaning: String) {
+    MEASURED("實測", "系統或感測器直接回報的數值"),
+    DERIVED("計算", "由實測值依公式換算，沒有猜測成分"),
+    ESTIMATED("估算", "近似值，有已知的誤差來源"),
+    PREDICTED("系統預測", "Android 對未來狀態的預測"),
+    LOOKUP("對照表", "App 內建的名稱資料，不是系統回報"),
+}
+
+private val PredictedColor = Color(0xFFB39DDB)
+
+@Composable
+fun DataSource.color(): Color = when (this) {
+    DataSource.MEASURED -> MaterialTheme.colorScheme.primary
+    DataSource.DERIVED -> MaterialTheme.colorScheme.secondary
+    DataSource.ESTIMATED -> com.galaxy.systemmonitor.ui.theme.LocalStatusColors.current.warn
+    DataSource.PREDICTED -> PredictedColor
+    DataSource.LOOKUP -> com.galaxy.systemmonitor.ui.theme.LocalStatusColors.current.muted
+}
+
+/** Small pill such as "● 實測", placed next to a card or tile title. */
+@Composable
+fun SourceTag(source: DataSource) {
+    val c = source.color()
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(50))
+            .background(c.copy(alpha = 0.14f))
+            .padding(horizontal = 7.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Box(Modifier.size(5.dp).clip(CircleShape).background(c))
+        Text(source.label, style = MaterialTheme.typography.labelSmall, color = c, maxLines = 1)
+    }
+}
+
+/** Bare colored dot for dense layouts; meaning is given by a nearby [SourceLegend]. */
+@Composable
+fun SourceDot(source: DataSource) {
+    Box(Modifier.size(6.dp).clip(CircleShape).background(source.color()))
+}
+
+/** Explains every tag once; shown at the bottom of the dashboard. */
+@Composable
+fun SourceLegend() {
+    SectionCard(title = "數值來源標示") {
+        DataSource.entries.forEach { s ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.width(96.dp)) { SourceTag(s) }
+                Caption(s.meaning)
+            }
+        }
     }
 }

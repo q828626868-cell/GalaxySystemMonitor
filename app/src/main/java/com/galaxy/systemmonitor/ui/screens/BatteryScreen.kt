@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.galaxy.systemmonitor.domain.RateStatus
+import com.galaxy.systemmonitor.ui.components.DataSource
 import com.galaxy.systemmonitor.ui.components.Caption
 import com.galaxy.systemmonitor.ui.components.StatColumn
 import com.galaxy.systemmonitor.ui.components.StatRow
@@ -74,10 +75,10 @@ fun BatteryScreen(vm: MonitorViewModel, onBack: () -> Unit) {
             item {
                 val tempLevel = TemperatureAnalyzer.classify(battery.temperatureC, settings.tempWarnC, settings.tempHighC)
                 StatRow {
-                    StatTile(Modifier.weight(1f), "電池溫度", Format.temperature(battery.temperatureC)) {
+                    StatTile(Modifier.weight(1f), "電池溫度", Format.temperature(battery.temperatureC), source = DataSource.MEASURED) {
                         StatusChip(tempLevel.label, status.forTemp(tempLevel))
                     }
-                    StatTile(Modifier.weight(1f), "電壓", Format.voltage(battery.voltageMv)) {
+                    StatTile(Modifier.weight(1f), "電壓", Format.voltage(battery.voltageMv), source = DataSource.MEASURED) {
                         Caption(battery.technology ?: "電池技術不明")
                     }
                 }
@@ -88,6 +89,7 @@ fun BatteryScreen(vm: MonitorViewModel, onBack: () -> Unit) {
                     StatTile(
                         Modifier.weight(1f), "電池健康度",
                         soh?.let { "$it%" } ?: "—",
+                        source = DataSource.MEASURED,
                         valueColor = when {
                             soh == null -> MaterialTheme.colorScheme.onSurfaceVariant
                             soh >= 80 -> status.good
@@ -97,13 +99,13 @@ fun BatteryScreen(vm: MonitorViewModel, onBack: () -> Unit) {
                     ) {
                         if (soh != null) UsageBar(soh / 100f, status.good) else Caption(battery.stateOfHealth.unavailableReason().orEmpty())
                     }
-                    StatTile(Modifier.weight(1f), "充電循環", battery.cycleCount?.let { "$it 次" } ?: "—") {
+                    StatTile(Modifier.weight(1f), "充電循環", battery.cycleCount?.let { "$it 次" } ?: "—", source = DataSource.MEASURED) {
                         Caption(if (battery.cycleCount == null) "裝置未提供" else "系統回報")
                     }
                 }
             }
             item {
-                SectionCard(title = "電池資訊") {
+                SectionCard(title = "電池資訊", source = DataSource.MEASURED) {
                     MetricRow("充電狀態", battery.status.label)
                     MetricRow("電源", battery.plugType.label)
                     MetricRow("Android 健康狀態", battery.health.label)
@@ -114,7 +116,7 @@ fun BatteryScreen(vm: MonitorViewModel, onBack: () -> Unit) {
         }
         item { PowerCard(power, status.good, MaterialTheme.colorScheme.tertiary) }
         item {
-            SectionCard(title = "平均耗電速度（放電期間）") {
+            SectionCard(title = "平均耗電速度（放電期間）", source = DataSource.DERIVED) {
                 val d = drain
                 if (d == null) {
                     UnavailableText("計算中…")
@@ -124,7 +126,7 @@ fun BatteryScreen(vm: MonitorViewModel, onBack: () -> Unit) {
             }
         }
         item {
-            SectionCard(title = "平均充電速度（充電期間）") {
+            SectionCard(title = "平均充電速度（充電期間）", source = DataSource.DERIVED) {
                 val d = drain
                 if (d == null) {
                     UnavailableText("計算中…")
@@ -143,7 +145,7 @@ fun BatteryScreen(vm: MonitorViewModel, onBack: () -> Unit) {
         }
         item { RangeSelector(range, { range = it }) }
         item {
-            SectionCard(title = "電量（%）") {
+            SectionCard(title = "電量（%）", source = DataSource.MEASURED) {
                 TimeSeriesChart(
                     points = levelPoints, start = start, end = now, gapMillis = gap,
                     lineColor = MaterialTheme.colorScheme.primary, unit = "%",
@@ -153,7 +155,7 @@ fun BatteryScreen(vm: MonitorViewModel, onBack: () -> Unit) {
             }
         }
         item {
-            SectionCard(title = "電池溫度（°C）") {
+            SectionCard(title = "電池溫度（°C）", source = DataSource.MEASURED) {
                 TimeSeriesChart(
                     points = tempPoints, start = start, end = now, gapMillis = gap,
                     lineColor = MaterialTheme.colorScheme.tertiary, unit = "°C",
@@ -176,7 +178,7 @@ fun BatteryScreen(vm: MonitorViewModel, onBack: () -> Unit) {
 
 @Composable
 private fun PowerCard(session: PowerSession, chargeColor: Color, dischargeColor: Color) {
-    SectionCard(title = "即時功率（每 2 秒更新）") {
+    SectionCard(title = "即時功率（每 2 秒更新）", source = DataSource.DERIVED) {
         val p = session.latest
         if (p == null) {
             UnavailableText("讀取中…")
@@ -202,12 +204,13 @@ private fun PowerCard(session: PowerSession, chargeColor: Color, dischargeColor:
             )
         }
         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            StatColumn(Modifier.weight(1f), Format.milliamps(p.currentMa), "即時電流")
-            StatColumn(Modifier.weight(1f), Format.voltage(p.voltageMv), "電壓")
+            StatColumn(Modifier.weight(1f), Format.milliamps(p.currentMa), "即時電流", source = DataSource.MEASURED)
+            StatColumn(Modifier.weight(1f), Format.voltage(p.voltageMv), "電壓", source = DataSource.MEASURED)
             StatColumn(
                 Modifier.weight(1f),
                 p.chargeCounterMah?.let { "$it mAh" } ?: "—",
                 "剩餘電量",
+                source = DataSource.MEASURED,
                 dim = p.chargeCounterMah == null,
             )
         }

@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.galaxy.systemmonitor.ui.components.DataSource
 import com.galaxy.systemmonitor.ui.components.Caption
 import com.galaxy.systemmonitor.ui.components.HeroCard
 import com.galaxy.systemmonitor.ui.components.HeroLabel
@@ -93,7 +94,7 @@ fun NetworkScreen(vm: MonitorViewModel, onBack: () -> Unit) {
                         )
                     },
                 ) {
-                    HeroLabel("目前網路")
+                    HeroLabel("目前網路", DataSource.MEASURED)
                     HeroValue(if (current.connected) current.transport.label else "無連線", large = false)
                     if (current.transport == NetworkTransport.CELLULAR) HeroSubtitle(current.cellular.displayText)
                     live?.let { HeroSubtitle("更新於 ${Format.dateTime(it.timestamp)}") }
@@ -108,7 +109,7 @@ fun NetworkScreen(vm: MonitorViewModel, onBack: () -> Unit) {
             }
             if (current.connected) {
                 item {
-                    SectionCard(title = "連線細節") {
+                    SectionCard(title = "連線細節", source = DataSource.MEASURED) {
                         MetricRow("經由 VPN", if (current.viaVpn) "是" else "否")
                         MetricRow("網路提供網際網路能力", yesNoUnknown(current.hasInternetCapability))
                         MetricRow(
@@ -138,7 +139,7 @@ fun NetworkScreen(vm: MonitorViewModel, onBack: () -> Unit) {
             }
         }
         item {
-            SectionCard(title = "網路變化紀錄") {
+            SectionCard(title = "網路變化紀錄", source = DataSource.MEASURED) {
                 val list = events.ifEmpty { listOfNotNull(lastEvent) }
                 if (list.isEmpty()) {
                     UnavailableText("尚無紀錄")
