@@ -76,17 +76,17 @@ Dark mode (system / dark / light), AMOLED black background, widget appearance an
 
 ## Screenshots
 
-> **These screenshots show version 1.0.0; the 1.1.0 UI has been redesigned and new screenshots are pending.** They were taken on an Android emulator (Pixel 7, Android 17 preview image), **not on a Galaxy S25 Ultra**. Some battery values (level, temperature) were simulated during testing with `adb shell dumpsys battery`. The UI language is Traditional Chinese.
+> Version 1.1.0, captured on a **physical Galaxy M14 5G** (Android 15 / One UI 7) while charging. All values are real readings, not simulated. The UI language is Traditional Chinese.
 
 | Dashboard | Battery | Battery temperature |
 |---|---|---|
-| <img src="docs/screenshots/dashboard.png" width="240" alt="Dashboard"> | <img src="docs/screenshots/battery.png" width="240" alt="Battery details"> | <img src="docs/screenshots/temperature.png" width="240" alt="Battery temperature (simulated unavailable state)"> |
+| <img src="docs/screenshots/dashboard.png" width="240" alt="Dashboard"> | <img src="docs/screenshots/battery.png" width="240" alt="Battery details"> | <img src="docs/screenshots/temperature.png" width="240" alt="Battery temperature"> |
 
-| History | Settings | Home-screen widgets |
+| Device info | History | Home-screen widgets |
 |---|---|---|
-| <img src="docs/screenshots/history.png" width="240" alt="History"> | <img src="docs/screenshots/settings.png" width="240" alt="Settings"> | <img src="docs/screenshots/widgets.png" width="240" alt="Small and large widgets"> |
+| <img src="docs/screenshots/device.png" width="240" alt="Device info"> | <img src="docs/screenshots/history.png" width="240" alt="History"> | <img src="docs/screenshots/widgets.png" width="240" alt="Large and small widgets"> |
 
-The battery-temperature screenshot shows how the app displays an unavailable temperature reading (triggered by simulation).
+The battery screen shows the charge cycle count as "not provided" because Samsung reports the system field as 0 (see [Limitations](#limitations-and-not-yet-implemented)); the network shows "no connection" because the phone was offline when captured.
 
 ## Technology and Dependencies
 
@@ -224,7 +224,7 @@ app/src/main/java/com/galaxy/systemmonitor/
 | Unit tests | 49 | Battery value and health parsing, rejection of abnormal values, current unit conversion and power, drain-rate algorithm, app screen-time calculation, CPU cluster and frequency parsing, model / chipset name lookup, temperature levels, chart gap splitting, settings validation, formatting |
 | Instrumented tests | 7 | Real system API reads, Room null columns, capture / throttle / prune / clear flow, widget destination whitelist |
 
-All 1.1.0 unit tests pass. The instrumented-test result is from 1.0.0 on an Android emulator; they have not been re-run for 1.1.0.
+All 49 unit tests pass for 1.1.0, and all 7 instrumented tests pass on a physical Galaxy M14 5G (Android 15).
 
 ## Limitations and Not Yet Implemented
 

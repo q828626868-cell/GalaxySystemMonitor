@@ -76,17 +76,17 @@
 
 ## 畫面截圖
 
-> **以下為 1.0.0 版的畫面；1.1.0 介面已全面改版，新截圖待更新。** 截圖來自 Android 模擬器（Pixel 7，Android 17 預覽版映像），**不是 Galaxy S25 Ultra 實機**。部分電池數值（電量、溫度）是測試時以 `adb shell dumpsys battery` 模擬的。
+> 1.1.0 版，攝於 **Galaxy M14 5G 實機**（Android 15／One UI 7）充電中的狀態，數值皆為真實讀數，未經模擬。
 
 | 儀表板 | 電池 | 電池溫度 |
 |---|---|---|
-| <img src="docs/screenshots/dashboard.png" width="240" alt="儀表板"> | <img src="docs/screenshots/battery.png" width="240" alt="電池詳細資訊"> | <img src="docs/screenshots/temperature.png" width="240" alt="電池溫度（模擬溫度不可用的狀態）"> |
+| <img src="docs/screenshots/dashboard.png" width="240" alt="儀表板"> | <img src="docs/screenshots/battery.png" width="240" alt="電池詳細資訊"> | <img src="docs/screenshots/temperature.png" width="240" alt="電池溫度"> |
 
-| 歷史紀錄 | 設定 | 桌面 Widget |
+| 裝置資訊 | 歷史紀錄 | 桌面 Widget |
 |---|---|---|
-| <img src="docs/screenshots/history.png" width="240" alt="歷史紀錄"> | <img src="docs/screenshots/settings.png" width="240" alt="設定"> | <img src="docs/screenshots/widgets.png" width="240" alt="小型與大型 Widget"> |
+| <img src="docs/screenshots/device.png" width="240" alt="裝置資訊"> | <img src="docs/screenshots/history.png" width="240" alt="歷史紀錄"> | <img src="docs/screenshots/widgets.png" width="240" alt="大型與小型 Widget"> |
 
-電池溫度截圖展示的是溫度資料不可用時的顯示方式（以模擬方式觸發）。
+電池頁的「充電循環」顯示「裝置未提供」，是因為 Samsung 將系統欄位回報為 0（見[限制](#目前限制與尚未實作的功能)）；網路顯示「無連線」是拍攝當下手機未連網。
 
 ## 技術與依賴
 
@@ -224,7 +224,7 @@ app/src/main/java/com/galaxy/systemmonitor/
 | 單元測試 | 49 | 電池數值與健康度解析、異常值拒絕、電流單位換算與功率、耗電速度演算法、App 使用時間計算、CPU 叢集與頻率解析、機型／晶片名稱對照、溫度分級、圖表斷點、設定驗證、格式化 |
 | 儀器測試 | 7 | 實際讀取系統 API、Room 空值欄位、取樣／節流／清理／清除流程、Widget 頁面白名單 |
 
-1.1.0 的單元測試全部通過；儀器測試為 1.0.0 時在 Android 模擬器上的結果，1.1.0 尚未重新執行。
+1.1.0 的 49 個單元測試全部通過；7 個儀器測試已在 Galaxy M14 5G 實機（Android 15）上全部通過。
 
 ## 目前限制與尚未實作的功能
 

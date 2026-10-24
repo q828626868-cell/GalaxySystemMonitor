@@ -89,4 +89,4 @@
 - 未進行混淆後 Release 版的實機驗證，也未設定 Release 簽章。
 - `QUERY_ALL_PACKAGES` 是安裝時自動授予的權限，即使使用者從未開啟「App 使用情況」，App 也有能力列出已安裝的 App；程式只在該頁面、且已有使用情況存取權時才查詢。若要上架 Google Play，此權限需要另外申報理由。
 - 以 ADB 授予的權限（`BATTERY_STATS`、使用情況存取權）不會在 App 內提示到期；使用者需要自行收回。設定頁會列出目前的授權狀態。
-- 1.1.0 已在 Galaxy S25 Ultra（Android 16）與 Galaxy M14 5G（Android 15）實機測試主要功能；儀器測試尚未針對 1.1.0 重新執行。
+- 1.1.0 已在 Galaxy S25 Ultra（Android 16）與 Galaxy M14 5G（Android 15）實機測試主要功能，7 個儀器測試在 Galaxy M14 5G 實機上全部通過。
