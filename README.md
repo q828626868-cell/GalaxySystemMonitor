@@ -44,6 +44,7 @@
 - 系統回報的異常數值會被拒絕並說明原因，例如溫度回報 0、超出 −30～90 °C，或電壓異常。
 - 耗電速度只使用相鄰且都在放電（或都在充電）的實際紀錄。間隔超過 3 小時、未接電源時電量上升，以及短時間異常跳動的區段都會排除，並顯示實際使用的資料時間範圍。
 - 圖表遇到資料缺口時會斷線，不會插值補點。
+- **每個數值都標明來源**：「實測」是系統或感測器直接回報；「計算」是由實測值依公式換算（如功率＝電壓 × 電流）；「估算」是有已知誤差的近似值（如記憶體使用量、App 流量）；「系統預測」是 Android 的預測（如熱負載）；「對照表」是 App 內建的名稱（如機型商品名）。
 
 ### 歷史紀錄與圖表
 
@@ -76,7 +77,7 @@
 
 ## 畫面截圖
 
-> 1.1.0 版，攝於 **Galaxy M14 5G 實機**（Android 15／One UI 7）充電中的狀態，數值皆為真實讀數，未經模擬。
+> 1.1.1 版，攝於 **Galaxy M14 5G 實機**（Android 15／One UI 7）充電中的狀態，數值皆為真實讀數，未經模擬。
 
 | 儀表板 | 電池 | 電池溫度 |
 |---|---|---|
@@ -121,7 +122,7 @@ minSdk 設為 31，原因是 Widget 目標格數設定（`targetCellWidth`／`ta
 
 ### 取得 APK
 
-到 [GitHub Releases](https://github.com/q828626868-cell/GalaxySystemMonitor/releases) 下載最新版本的 APK（例如 `GalaxySystemMonitor-v1.1.0-debug.apk`）。各版本變更請見 [CHANGELOG.md](CHANGELOG.md)。也可以依照[從原始碼建置](#從原始碼建置)自行產生。
+到 [GitHub Releases](https://github.com/q828626868-cell/GalaxySystemMonitor/releases) 下載最新版本的 APK（例如 `GalaxySystemMonitor-v1.1.1-debug.apk`）。各版本變更請見 [CHANGELOG.md](CHANGELOG.md)。也可以依照[從原始碼建置](#從原始碼建置)自行產生。
 
 > 目前發布的是以 Android 預設偵錯金鑰簽署的 **Debug 版本**，尚未設定正式的 Release 簽署。每個 Release 頁面都附有 APK 的 SHA-256 雜湊值，可用來確認檔案完整性。
 
@@ -141,7 +142,7 @@ ADB 不是使用本 App 的必要條件，只是從電腦安裝時較方便。
 
 ```bash
 adb devices                                              # 確認裝置已連線
-adb install -r GalaxySystemMonitor-v1.1.0-debug.apk      # 從 Releases 下載的檔案
+adb install -r GalaxySystemMonitor-v1.1.1-debug.apk      # 從 Releases 下載的檔案
 # 或自行建置的檔案：adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
@@ -224,7 +225,7 @@ app/src/main/java/com/galaxy/systemmonitor/
 | 單元測試 | 49 | 電池數值與健康度解析、異常值拒絕、電流單位換算與功率、耗電速度演算法、App 使用時間計算、CPU 叢集與頻率解析、機型／晶片名稱對照、溫度分級、圖表斷點、設定驗證、格式化 |
 | 儀器測試 | 7 | 實際讀取系統 API、Room 空值欄位、取樣／節流／清理／清除流程、Widget 頁面白名單 |
 
-1.1.0 的 49 個單元測試全部通過；7 個儀器測試已在 Galaxy M14 5G 實機（Android 15）上全部通過。
+1.1.1 的 49 個單元測試全部通過；7 個儀器測試已在 Galaxy M14 5G 實機（Android 15）上全部通過。
 
 ## 目前限制與尚未實作的功能
 

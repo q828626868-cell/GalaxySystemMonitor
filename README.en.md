@@ -44,6 +44,7 @@ A native Android phone-health monitor written in Kotlin, with home-screen widget
 - Abnormal values reported by the system are rejected with an explanation, for example a temperature of exactly 0, a temperature outside −30 to 90 °C, or an implausible voltage.
 - Drain rates only use pairs of adjacent recorded samples that are both discharging (or both charging). Gaps longer than 3 hours, level increases while unplugged, and sudden jumps are excluded, and the actual time range of the data used is displayed.
 - Charts break the line at gaps in the data. Nothing is interpolated.
+- **Every value is labelled with its source**: "measured" values come straight from the system or a sensor; "calculated" values are derived from measured ones by formula (e.g. power = voltage × current); "estimated" values are approximations with known error (e.g. memory in use, per-app traffic); "system prediction" is Android's forecast (e.g. thermal headroom); "lookup" is a name from the app's built-in table (e.g. the marketing model name).
 
 ### History and charts
 
@@ -76,7 +77,7 @@ Dark mode (system / dark / light), AMOLED black background, widget appearance an
 
 ## Screenshots
 
-> Version 1.1.0, captured on a **physical Galaxy M14 5G** (Android 15 / One UI 7) while charging. All values are real readings, not simulated. The UI language is Traditional Chinese.
+> Version 1.1.1, captured on a **physical Galaxy M14 5G** (Android 15 / One UI 7) while charging. All values are real readings, not simulated. The UI language is Traditional Chinese.
 
 | Dashboard | Battery | Battery temperature |
 |---|---|---|
@@ -121,7 +122,7 @@ minSdk is 31 because the widget target-cell attributes (`targetCellWidth` / `tar
 
 ### Getting the APK
 
-Download the latest APK (for example `GalaxySystemMonitor-v1.1.0-debug.apk`) from [GitHub Releases](https://github.com/q828626868-cell/GalaxySystemMonitor/releases), or build it yourself as described in [Building from Source](#building-from-source). See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
+Download the latest APK (for example `GalaxySystemMonitor-v1.1.1-debug.apk`) from [GitHub Releases](https://github.com/q828626868-cell/GalaxySystemMonitor/releases), or build it yourself as described in [Building from Source](#building-from-source). See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
 > The published APK is a **debug build** signed with Android's default debug key; no release signing is configured yet. Each Release page lists the APK's SHA-256 hash so you can verify the file.
 
@@ -141,7 +142,7 @@ ADB is not required to use the app; it is just a convenient way to install from 
 
 ```bash
 adb devices                                              # confirm the device is connected
-adb install -r GalaxySystemMonitor-v1.1.0-debug.apk      # file downloaded from Releases
+adb install -r GalaxySystemMonitor-v1.1.1-debug.apk      # file downloaded from Releases
 # or a locally built file: adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
@@ -224,7 +225,7 @@ app/src/main/java/com/galaxy/systemmonitor/
 | Unit tests | 49 | Battery value and health parsing, rejection of abnormal values, current unit conversion and power, drain-rate algorithm, app screen-time calculation, CPU cluster and frequency parsing, model / chipset name lookup, temperature levels, chart gap splitting, settings validation, formatting |
 | Instrumented tests | 7 | Real system API reads, Room null columns, capture / throttle / prune / clear flow, widget destination whitelist |
 
-All 49 unit tests pass for 1.1.0, and all 7 instrumented tests pass on a physical Galaxy M14 5G (Android 15).
+All 49 unit tests pass for 1.1.1, and all 7 instrumented tests pass on a physical Galaxy M14 5G (Android 15).
 
 ## Limitations and Not Yet Implemented
 
