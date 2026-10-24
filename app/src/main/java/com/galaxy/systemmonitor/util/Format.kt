@@ -31,6 +31,14 @@ object Format {
     fun voltage(mv: Int?): String =
         mv?.let { String.format(Locale.US, "%.2f V", it / 1000.0) } ?: UNAVAILABLE
 
+    /** Signed watts, e.g. "+12.3 W" / "−2.1 W". */
+    fun watts(w: Double?): String = w?.let {
+        val sign = if (it > 0.05) "+" else if (it < -0.05) "−" else ""
+        String.format(Locale.US, "%s%.1f W", sign, kotlin.math.abs(it))
+    } ?: UNAVAILABLE
+
+    fun milliamps(ma: Int?): String = ma?.let { String.format(Locale.US, "%,d mA", it) } ?: UNAVAILABLE
+
     fun time(ts: Long, zone: ZoneId = ZoneId.systemDefault()): String =
         timeFmt.format(Instant.ofEpochMilli(ts).atZone(zone))
 
@@ -46,7 +54,8 @@ object Format {
     fun relative(ts: Long, now: Long = System.currentTimeMillis()): String {
         val diff = now - ts
         return when {
-            diff < 0 -> dateTime(ts)
+            // "now" may be sampled a few ms before the reading it is compared with.
+            diff < -60_000 -> dateTime(ts)
             diff < 60_000 -> "剛剛"
             diff < 3_600_000 -> "${diff / 60_000} 分鐘前"
             diff < 86_400_000 -> "${diff / 3_600_000} 小時前"

@@ -11,6 +11,28 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
+    <!-- Optional development permission. Cannot be requested at runtime; only granted by the user via
+         "adb shell pm grant com.galaxy.systemmonitor android.permission.BATTERY_STATS".
+         Used solely to read BATTERY_PROPERTY_STATE_OF_HEALTH (battery health %). Without it that
+         single value is shown as "permission required" and everything else works unchanged. -->
+    <uses-permission
+        android:name="android.permission.BATTERY_STATS"
+        tools:ignore="ProtectedPermissions" />
+
+    <!-- Optional "usage access" app-op, granted by the user in Settings > Usage access (or via
+         "adb shell appops set com.galaxy.systemmonitor GET_USAGE_STATS allow"). Used only by the
+         App usage screen to read per-app foreground time and per-app network traffic. -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
+    <!-- Install-time permission. Lets the App usage screen turn package names / UIDs from the
+         usage and traffic statistics into app names and icons. Without it, most apps would only
+         show as a package name or "UID 12345". -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
     <!-- WorkManager's manifest declares foreground-service support. This app never runs
          foreground work, so the permission and service are removed from the merged manifest. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />

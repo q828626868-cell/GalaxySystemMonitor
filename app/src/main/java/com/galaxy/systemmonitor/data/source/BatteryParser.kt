@@ -4,6 +4,7 @@ import com.galaxy.systemmonitor.data.model.BatteryHealth
 import com.galaxy.systemmonitor.data.model.BatteryInfo
 import com.galaxy.systemmonitor.data.model.ChargeStatus
 import com.galaxy.systemmonitor.data.model.PlugType
+import com.galaxy.systemmonitor.data.model.Reading
 import kotlin.math.roundToInt
 
 /**
@@ -25,6 +26,12 @@ object BatteryParser {
         val health: Int,
         val technology: String?,
         val cycleCount: Int,
+        /** BATTERY_PROPERTY_STATE_OF_HEALTH, Int.MIN_VALUE when unsupported or not readable. */
+        val stateOfHealth: Int = Int.MIN_VALUE,
+        /** Whether BATTERY_STATS is granted; when false [stateOfHealth] was not queried. */
+        val stateOfHealthPermitted: Boolean = false,
+        /** false below Android 14, where the property does not exist. */
+        val stateOfHealthSupported: Boolean = true,
     )
 
     // Values mirror android.os.BatteryManager constants.
@@ -46,6 +53,10 @@ object BatteryParser {
     /** Accepted battery temperature range in °C. Outside this the reading is treated as invalid. */
     val PLAUSIBLE_TEMPERATURE_C = -30.0..90.0
     val PLAUSIBLE_VOLTAGE_MV = 2_000..6_000
+    /** A brand-new cell may briefly report slightly above 100 %. */
+    val PLAUSIBLE_STATE_OF_HEALTH = 1..110
+
+    const val SOH_PERMISSION_REASON = "需要以 ADB 授予 BATTERY_STATS 權限"
 
     fun parse(raw: Raw): BatteryInfo {
         val notes = mutableListOf<String>()
@@ -120,6 +131,27 @@ object BatteryParser {
             else -> BatteryHealth.UNKNOWN
         }
 
+        val stateOfHealth: Reading<Int> = when {
+            !raw.stateOfHealthSupported -> Reading.Unavailable("需要 Android 14 以上")
+            !raw.stateOfHealthPermitted -> Reading.Unavailable(SOH_PERMISSION_REASON)
+            raw.stateOfHealth == Int.MIN_VALUE -> Reading.Unavailable("裝置未提供")
+            raw.stateOfHealth in PLAUSIBLE_STATE_OF_HEALTH -> Reading.Ok(raw.stateOfHealth)
+            else -> {
+                notes += "系統回報的電池健康度數值異常（${raw.stateOfHealth}），已忽略"
+                Reading.Unavailable("數值異常")
+            }
+        }
+
+        val cycleCount = when {
+            raw.cycleCount < 0 -> null
+            raw.cycleCount == 0 -> {
+                // Samsung and other vendors leave EXTRA_CYCLE_COUNT at its default 0 when unimplemented.
+                notes += "系統回報循環次數為 0（通常代表裝置未實作），已視為不可用"
+                null
+            }
+            else -> raw.cycleCount
+        }
+
         return BatteryInfo(
             levelPercent = level,
             temperatureC = temperature,
@@ -128,7 +160,8 @@ object BatteryParser {
             plugType = plug,
             health = health,
             technology = raw.technology?.takeIf { it.isNotBlank() },
-            cycleCount = raw.cycleCount.takeIf { it >= 0 },
+            cycleCount = cycleCount,
+            stateOfHealth = stateOfHealth,
             notes = notes,
         )
     }

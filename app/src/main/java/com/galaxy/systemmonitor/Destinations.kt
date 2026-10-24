@@ -12,10 +12,12 @@ object Destinations {
     const val MEMORY = "memory"
     const val STORAGE = "storage"
     const val NETWORK = "network"
+    const val APP_USAGE = "app_usage"
+    const val DEVICE = "device"
     const val HISTORY = "history"
     const val SETTINGS = "settings"
 
-    val ALL = setOf(DASHBOARD, BATTERY, TEMPERATURE, MEMORY, STORAGE, NETWORK, HISTORY, SETTINGS)
+    val ALL = setOf(DASHBOARD, BATTERY, TEMPERATURE, MEMORY, STORAGE, NETWORK, APP_USAGE, DEVICE, HISTORY, SETTINGS)
 
     private const val EXTRA_DESTINATION = "com.galaxy.systemmonitor.extra.DESTINATION"
     private const val ACTION_OPEN = "com.galaxy.systemmonitor.action.OPEN"

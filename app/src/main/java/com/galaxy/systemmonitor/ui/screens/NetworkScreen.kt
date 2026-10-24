@@ -3,7 +3,32 @@ package com.galaxy.systemmonitor.ui.screens
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.galaxy.systemmonitor.ui.components.Caption
+import com.galaxy.systemmonitor.ui.components.HeroCard
+import com.galaxy.systemmonitor.ui.components.HeroLabel
+import com.galaxy.systemmonitor.ui.components.HeroPill
+import com.galaxy.systemmonitor.ui.components.HeroPills
+import com.galaxy.systemmonitor.ui.components.HeroSubtitle
+import com.galaxy.systemmonitor.ui.components.HeroValue
+import com.galaxy.systemmonitor.ui.components.RingGauge
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -43,30 +68,56 @@ fun NetworkScreen(vm: MonitorViewModel, onBack: () -> Unit) {
     }
 
     ScreenScaffold(title = "網路狀態", onBack = onBack) {
-        item {
-            val reading = live?.network
-            val n = reading?.valueOrNull()
-            SectionCard(title = "目前連線") {
-                if (n == null) {
-                    UnavailableText(reading?.unavailableReason() ?: "讀取中…")
-                } else {
-                    BigValue(if (n.connected) n.transport.label else "無連線")
-                    MetricRow("已連線至網路", if (n.connected) "是" else "否")
-                    MetricRow("連線類型", n.transport.label)
-                    if (n.connected) {
-                        MetricRow("經由 VPN", if (n.viaVpn) "是" else "否")
-                        MetricRow("網路提供網際網路能力", yesNoUnknown(n.hasInternetCapability))
+        val reading = live?.network
+        val current = reading?.valueOrNull()
+        if (current == null) {
+            item { SectionCard { UnavailableText(reading?.unavailableReason() ?: "讀取中…") } }
+        } else {
+            item {
+                val ok = current.connected && current.validated == true
+                val stateColor = when {
+                    !current.connected -> status.danger
+                    ok -> status.good
+                    else -> status.warn
+                }
+                HeroCard(
+                    trailing = {
+                        RingGauge(
+                            if (current.connected) 1f else 0f,
+                            stateColor,
+                            centerText = when {
+                                !current.connected -> "離線"
+                                ok -> "可上網"
+                                else -> "未驗證"
+                            },
+                        )
+                    },
+                ) {
+                    HeroLabel("目前網路")
+                    HeroValue(if (current.connected) current.transport.label else "無連線", large = false)
+                    if (current.transport == NetworkTransport.CELLULAR) HeroSubtitle(current.cellular.displayText)
+                    live?.let { HeroSubtitle("更新於 ${Format.dateTime(it.timestamp)}") }
+                    if (current.connected) {
+                        HeroPills {
+                            if (current.viaVpn) HeroPill("VPN")
+                            if (current.metered == true) HeroPill("計量制")
+                            if (current.hasInternetCapability == true) HeroPill("網際網路能力")
+                        }
+                    }
+                }
+            }
+            if (current.connected) {
+                item {
+                    SectionCard(title = "連線細節") {
+                        MetricRow("經由 VPN", if (current.viaVpn) "是" else "否")
+                        MetricRow("網路提供網際網路能力", yesNoUnknown(current.hasInternetCapability))
                         MetricRow(
                             "系統判定可連上網際網路",
-                            yesNoUnknown(n.validated),
-                            if (n.validated == true) status.good else status.warn,
+                            yesNoUnknown(current.validated),
+                            if (current.validated == true) status.good else status.warn,
                         )
-                        MetricRow("計量制連線", yesNoUnknown(n.metered))
+                        MetricRow("計量制連線", yesNoUnknown(current.metered))
                     }
-                    if (n.transport == NetworkTransport.CELLULAR) {
-                        MetricRow("行動網路類型", n.cellular.displayText)
-                    }
-                    live?.let { MetricRow("更新時間", Format.fullDateTime(it.timestamp)) }
                 }
             }
         }
@@ -87,40 +138,28 @@ fun NetworkScreen(vm: MonitorViewModel, onBack: () -> Unit) {
             }
         }
         item {
-            SectionCard(title = "最後一次網路狀態變化") {
-                val e = lastEvent
-                if (e == null) {
-                    Text("尚無紀錄", style = MaterialTheme.typography.bodyMedium)
+            SectionCard(title = "網路變化紀錄") {
+                val list = events.ifEmpty { listOfNotNull(lastEvent) }
+                if (list.isEmpty()) {
+                    UnavailableText("尚無紀錄")
                 } else {
-                    MetricRow("時間", Format.fullDateTime(e.timestamp))
-                    MetricRow(
-                        "變為",
-                        if (e.connected) NetworkTransport.fromName(e.transport).label else "無連線",
-                    )
-                    MetricRow(
-                        "偵測方式",
-                        NetworkDetection.entries.firstOrNull { it.name == e.detectedBy }?.label ?: "未知",
-                    )
-                }
-            }
-        }
-        if (events.size > 1) {
-            item {
-                SectionCard(title = "近期變化紀錄") {
-                    events.forEach { e ->
-                        val text = buildString {
-                            append(if (e.connected) NetworkTransport.fromName(e.transport).label else "無連線")
-                            if (e.connected) {
-                                append(
-                                    when (e.validated) {
-                                        true -> " · 已驗證"
-                                        false -> " · 未驗證"
-                                        null -> ""
-                                    },
-                                )
-                            }
+                    list.forEachIndexed { i, e ->
+                        val color = when {
+                            !e.connected -> status.danger
+                            e.validated == false -> status.warn
+                            else -> status.good
                         }
-                        MetricRow(Format.fullDateTime(e.timestamp), text)
+                        TimelineRow(
+                            color = color,
+                            title = buildString {
+                                append(if (e.connected) NetworkTransport.fromName(e.transport).label else "無連線")
+                                if (e.connected && e.validated == true) append(" · 已驗證")
+                                if (e.connected && e.validated == false) append(" · 未驗證")
+                            },
+                            subtitle = Format.fullDateTime(e.timestamp) + " · " +
+                                (NetworkDetection.entries.firstOrNull { it.name == e.detectedBy }?.label ?: "未知"),
+                            last = i == list.lastIndex,
+                        )
                     }
                 }
             }
@@ -131,6 +170,25 @@ fun NetworkScreen(vm: MonitorViewModel, onBack: () -> Unit) {
                     "兩者都不是實際測得的速度或延遲。本 App 不會主動進行網速或延遲測試，也沒有網際網路權限，不會產生任何流量。" +
                     "App 未執行時發生的網路變化，會在下一次取樣時才被偵測到，因此實際變化時間可能更早。",
             )
+        }
+    }
+}
+
+/** One entry of a vertical timeline: a colored dot with a connecting line below it. */
+@Composable
+private fun TimelineRow(color: Color, title: String, subtitle: String, last: Boolean) {
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+        Column(Modifier.width(20.dp).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Spacer(Modifier.height(5.dp))
+            Box(Modifier.size(10.dp).clip(CircleShape).background(color))
+            if (!last) {
+                Box(Modifier.width(2.dp).weight(1f).background(MaterialTheme.colorScheme.outlineVariant))
+            }
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.padding(bottom = if (last) 0.dp else 12.dp)) {
+            Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Caption(subtitle)
         }
     }
 }

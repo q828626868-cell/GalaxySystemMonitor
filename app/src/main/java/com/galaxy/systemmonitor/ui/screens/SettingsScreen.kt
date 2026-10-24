@@ -11,6 +11,8 @@ import androidx.compose.ui.unit.dp
 import com.galaxy.systemmonitor.widget.LargeWidgetReceiver
 import com.galaxy.systemmonitor.widget.SmallWidgetReceiver
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -55,6 +57,8 @@ private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
     }
 }
 
+private data class PermissionStates(val phone: Boolean, val batteryStats: Boolean, val usage: Boolean)
+
 @Composable
 private fun Label(text: String) {
     Text(text, style = MaterialTheme.typography.bodyMedium)
@@ -83,6 +87,20 @@ fun SettingsScreen(vm: MonitorViewModel, onBack: (() -> Unit)?) {
     val now by vm.now.collectAsStateWithLifecycle()
     var confirmClear by rememberSaveable { mutableStateOf(false) }
     val status = LocalStatusColors.current
+
+    // Re-check permissions on every resume: they are granted outside the app (ADB / system settings).
+    var resumeCount by remember { mutableIntStateOf(0) }
+    LifecycleResumeEffect(Unit) {
+        resumeCount++
+        onPauseOrDispose { }
+    }
+    val perms = remember(resumeCount) {
+        PermissionStates(
+            phone = vm.hasPhonePermission(),
+            batteryStats = vm.hasBatteryStatsPermission(),
+            usage = vm.hasUsageAccess(),
+        )
+    }
 
     // Local slider state, committed when the finger is lifted.
     var warn by remember(settings.tempWarnC) { mutableFloatStateOf(settings.tempWarnC.toFloat()) }
@@ -229,10 +247,14 @@ fun SettingsScreen(vm: MonitorViewModel, onBack: (() -> Unit)?) {
         }
         item {
             SectionCard(title = "權限") {
+                fun state(granted: Boolean) = if (granted) "已授權" else "未授權"
                 MetricRow("網路狀態（一般權限）", "安裝時自動授予")
-                MetricRow("電話（選用，僅讀取行動網路類型）", if (vm.hasPhonePermission()) "已授權" else "未授權")
+                MetricRow("電話（選用，僅讀取行動網路類型）", state(perms.phone))
+                MetricRow("BATTERY_STATS（選用，電池健康度）", state(perms.batteryStats))
+                MetricRow("使用情況存取權（選用，App 使用情況）", state(perms.usage))
                 Text(
-                    "本 App 不需要 Root、無障礙服務、使用情況存取權、通知存取權、檔案或媒體存取權限，也沒有網際網路權限。",
+                    "選用權限都可以不給，只會影響對應的單一功能。本 App 不需要 Root、無障礙服務、通知存取權、" +
+                        "檔案或媒體存取權限，也沒有網際網路權限。",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -1,6 +1,17 @@
 package com.galaxy.systemmonitor.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import com.galaxy.systemmonitor.ui.components.Caption
+import com.galaxy.systemmonitor.ui.components.StatColumn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.items
@@ -54,9 +65,11 @@ fun HistoryScreen(vm: MonitorViewModel, onBack: (() -> Unit)?) {
     ScreenScaffold(title = "歷史紀錄", onBack = onBack) {
         item {
             SectionCard(title = "本機資料") {
-                MetricRow("紀錄筆數", "$count")
-                MetricRow("最早紀錄", oldest?.let { Format.fullDateTime(it) } ?: "尚無紀錄")
-                MetricRow("保存期限", "${settings.retentionDays} 天（超過自動刪除）")
+                Row(Modifier.fillMaxWidth()) {
+                    StatColumn(Modifier.weight(1f), "$count", "紀錄筆數")
+                    StatColumn(Modifier.weight(1f), "${settings.retentionDays} 天", "保存期限")
+                    StatColumn(Modifier.weight(1f), oldest?.let { Format.dateTime(it) } ?: "—", "最早紀錄", dim = oldest == null)
+                }
             }
         }
         if (history != null && samples.isEmpty()) {
@@ -95,37 +108,54 @@ fun HistoryScreen(vm: MonitorViewModel, onBack: (() -> Unit)?) {
                 )
             }
             items(recent, key = { it.id }) { s ->
-                Column {
-                    Row(Modifier.fillMaxWidth()) {
+                val level = s.battery?.level
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    // Battery level badge
+                    Box(
+                        Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Text(
-                            Format.fullDateTime(s.timestamp),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Text(
-                            SampleSource.entries.firstOrNull { it.name == s.source }?.label ?: s.source,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            level?.let { "$it%" } ?: "—",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
                         )
                     }
-                    val parts = listOf(
-                        s.battery?.level?.let { "$it%" } ?: "電量不可用",
-                        s.chargeStatus.label,
-                        Format.temperature(s.temperatureC),
-                        s.memoryUsedFraction?.let { "RAM ${Format.percent(it)}" } ?: "RAM 不可用",
-                        when (s.network?.connected) {
-                            true -> NetworkTransport.fromName(s.network.transport).label
-                            false -> "無連線"
-                            null -> "網路未知"
-                        },
-                    )
-                    Text(
-                        parts.joinToString(" · "),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                Format.fullDateTime(s.timestamp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Caption(SampleSource.entries.firstOrNull { it.name == s.source }?.label ?: s.source)
+                        }
+                        Caption(
+                            listOf(
+                                s.chargeStatus.label,
+                                Format.temperature(s.temperatureC),
+                                s.memoryUsedFraction?.let { "RAM ${Format.percent(it)}" } ?: "RAM 不可用",
+                                when (s.network?.connected) {
+                                    true -> NetworkTransport.fromName(s.network.transport).label
+                                    false -> "無連線"
+                                    null -> "網路未知"
+                                },
+                            ).joinToString(" · "),
+                        )
+                    }
                 }
             }
         }

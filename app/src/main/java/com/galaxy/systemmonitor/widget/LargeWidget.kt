@@ -36,6 +36,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.galaxy.systemmonitor.Destinations
+import com.galaxy.systemmonitor.data.model.valueOrNull
 import com.galaxy.systemmonitor.domain.Series
 import com.galaxy.systemmonitor.util.Format
 
@@ -65,6 +66,7 @@ private fun LargeWidgetContent(state: WidgetState) {
     val colors = widgetColors(state.settings.widgetStyle)
     val size = LocalSize.current
     val showTrend = state.settings.widgetShowTrend && size.height >= 320.dp
+    val compact = size.height < 300.dp
 
     Column(
         modifier = GlanceModifier.fillMaxSize()
@@ -81,40 +83,34 @@ private fun LargeWidgetContent(state: WidgetState) {
         }
 
         val battery = state.battery
-        // Battery headline
-        Column(
+        // Battery headline: ring + status in a tinted block, like the app's hero card.
+        Row(
             modifier = GlanceModifier.fillMaxWidth()
+                .background(colors.hero)
+                .cornerRadius(18.dp)
+                .padding(12.dp)
                 .clickable(actionStartActivity(Destinations.intent(context, Destinations.BATTERY))),
+            verticalAlignment = Alignment.Vertical.CenterVertically,
         ) {
-            Row(verticalAlignment = Alignment.Vertical.Bottom, modifier = GlanceModifier.fillMaxWidth()) {
+            BatteryRing(state, colors, if (compact) 60.dp else 78.dp, if (compact) 16.sp else 20.sp)
+            Spacer(GlanceModifier.width(14.dp))
+            Column(GlanceModifier.defaultWeight()) {
+                Text("電池", style = TextStyle(color = colors.subtext, fontSize = 11.sp, fontWeight = FontWeight.Medium))
                 Text(
-                    battery?.levelPercent?.let { "$it%" } ?: Format.UNAVAILABLE,
-                    style = TextStyle(color = colors.text, fontSize = 34.sp, fontWeight = FontWeight.Bold),
+                    battery?.let {
+                        if (it.pluggedIn == true) "${it.status.label} · ${it.plugType.label}" else it.status.label
+                    } ?: (state.batteryError ?: "電池資訊不可用"),
+                    maxLines = 1,
+                    style = TextStyle(color = colors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold),
                 )
-                Spacer(GlanceModifier.width(10.dp))
-                Column(GlanceModifier.defaultWeight().padding(bottom = 4.dp)) {
-                    Text(
-                        battery?.let {
-                            if (it.pluggedIn == true) "${it.status.label} · ${it.plugType.label}" else it.status.label
-                        } ?: (state.batteryError ?: "電池資訊不可用"),
-                        maxLines = 1,
-                        style = TextStyle(color = colors.subtext, fontSize = 12.sp),
-                    )
-                    Text(
-                        "電池溫度 ${Format.temperature(battery?.temperatureC)} · ${state.tempLevel.label}",
-                        maxLines = 1,
-                        style = TextStyle(color = colors.forTemp(state.tempLevel), fontSize = 12.sp),
-                    )
+                Spacer(GlanceModifier.height(6.dp))
+                Row {
+                    WidgetPill(Format.temperature(battery?.temperatureC), colors.forTemp(state.tempLevel), colors)
+                    battery?.stateOfHealth?.valueOrNull()?.let {
+                        Spacer(GlanceModifier.width(6.dp))
+                        WidgetPill("健康度 $it%", colors.accent, colors)
+                    }
                 }
-            }
-            if (battery?.levelPercent != null) {
-                Spacer(GlanceModifier.height(4.dp))
-                LinearProgressIndicator(
-                    progress = battery.levelPercent / 100f,
-                    modifier = GlanceModifier.fillMaxWidth().height(6.dp),
-                    color = colors.accent,
-                    backgroundColor = colors.track,
-                )
             }
         }
         Spacer(GlanceModifier.height(8.dp))
@@ -135,6 +131,7 @@ private fun LargeWidgetContent(state: WidgetState) {
                 label = "系統記憶體",
                 value = memory?.let { Format.percent(it.usedFraction) } ?: Format.UNAVAILABLE,
                 sub = memory?.let { "${Format.bytes(it.usedBytes)} / ${Format.bytes(it.totalBytes)}" },
+                progress = memory?.usedFraction?.toFloat(),
                 route = Destinations.MEMORY, colors = colors,
                 modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
             )
@@ -145,6 +142,8 @@ private fun LargeWidgetContent(state: WidgetState) {
                 label = "剩餘儲存空間",
                 value = storage?.let { Format.bytes(it.freeBytes) } ?: Format.UNAVAILABLE,
                 sub = storage?.let { "已用 ${Format.percent(it.usedFraction)}" + if (state.lowStorage) " · 偏低" else "" },
+                progress = storage?.usedFraction?.toFloat(),
+                progressColor = if (state.lowStorage) colors.warn else colors.accent,
                 route = Destinations.STORAGE, colors = colors,
                 valueColor = if (state.lowStorage) colors.warn else colors.text,
                 modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
@@ -190,16 +189,19 @@ private fun LargeWidgetContent(state: WidgetState) {
             }
         }
 
-        Spacer(GlanceModifier.height(8.dp))
-        Box(
-            modifier = GlanceModifier.fillMaxWidth()
-                .background(colors.card)
-                .cornerRadius(12.dp)
-                .padding(vertical = 7.dp)
-                .clickable(actionStartActivity(Destinations.intent(context, Destinations.DASHBOARD))),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("開啟詳細資訊 ›", style = TextStyle(color = colors.accent, fontSize = 12.sp, fontWeight = FontWeight.Medium))
+        // Short sizes need the room for the tiles; the header title also opens the app.
+        if (!compact) Column(GlanceModifier.fillMaxWidth()) {
+            Spacer(GlanceModifier.height(8.dp))
+            Box(
+                modifier = GlanceModifier.fillMaxWidth()
+                    .background(colors.card)
+                    .cornerRadius(12.dp)
+                    .padding(vertical = 7.dp)
+                    .clickable(actionStartActivity(Destinations.intent(context, Destinations.DASHBOARD))),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("開啟詳細資訊 ›", style = TextStyle(color = colors.accent, fontSize = 12.sp, fontWeight = FontWeight.Medium))
+            }
         }
     }
 }

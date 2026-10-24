@@ -4,9 +4,12 @@ import android.content.Context
 import com.galaxy.systemmonitor.data.MonitorRepository
 import com.galaxy.systemmonitor.data.db.AppDatabase
 import com.galaxy.systemmonitor.data.settings.SettingsRepository
+import com.galaxy.systemmonitor.data.source.AppUsageReader
 import com.galaxy.systemmonitor.data.source.BatteryReader
+import com.galaxy.systemmonitor.data.source.DeviceInfoReader
 import com.galaxy.systemmonitor.data.source.MemoryReader
 import com.galaxy.systemmonitor.data.source.NetworkReader
+import com.galaxy.systemmonitor.data.source.PowerReader
 import com.galaxy.systemmonitor.data.source.StorageReader
 import com.galaxy.systemmonitor.work.NetworkWatcher
 import com.galaxy.systemmonitor.work.WorkScheduler
@@ -35,6 +38,9 @@ class AppContainer(private val context: Context) {
         )
     }
 
+    val powerReader: PowerReader by lazy { PowerReader(context) }
+    val appUsageReader: AppUsageReader by lazy { AppUsageReader(context) }
+    val deviceInfoReader: DeviceInfoReader by lazy { DeviceInfoReader(context) }
     private val networkWatcher by lazy { NetworkWatcher(context, repository, appScope) }
 
     fun start() {

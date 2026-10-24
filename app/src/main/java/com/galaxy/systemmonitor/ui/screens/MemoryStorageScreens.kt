@@ -1,6 +1,17 @@
 package com.galaxy.systemmonitor.ui.screens
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Modifier
+import com.galaxy.systemmonitor.ui.components.Caption
+import com.galaxy.systemmonitor.ui.components.HeroCard
+import com.galaxy.systemmonitor.ui.components.HeroLabel
+import com.galaxy.systemmonitor.ui.components.HeroPill
+import com.galaxy.systemmonitor.ui.components.HeroPills
+import com.galaxy.systemmonitor.ui.components.HeroSubtitle
+import com.galaxy.systemmonitor.ui.components.HeroValue
+import com.galaxy.systemmonitor.ui.components.RingGauge
+import com.galaxy.systemmonitor.ui.components.StatRow
+import com.galaxy.systemmonitor.ui.components.StatTile
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,23 +48,41 @@ fun MemoryScreen(vm: MonitorViewModel, onBack: () -> Unit) {
     var range by rememberSaveable { mutableStateOf(TimeRange.H24) }
     val samples = history.orEmpty()
     val chart = remember(samples) { Series.memoryChart(samples) }
+    val status = LocalStatusColors.current
     val start = now - range.millis
 
     ScreenScaffold(title = "系統記憶體", onBack = onBack) {
-        item {
-            val reading = live?.memory
-            val m = reading?.valueOrNull()
-            SectionCard(title = "目前狀態（整台裝置）") {
-                if (m == null) {
-                    UnavailableText(reading?.unavailableReason() ?: "讀取中…")
-                } else {
-                    BigValue(Format.percent(m.usedFraction))
-                    UsageBar(m.usedFraction.toFloat(), MaterialTheme.colorScheme.secondary)
-                    MetricRow("系統可用總記憶體", Format.bytes(m.totalBytes))
-                    MetricRow("可用記憶體", Format.bytes(m.availableBytes))
-                    MetricRow("使用中（估算）", Format.bytes(m.usedBytes))
-                    MetricRow("系統低記憶體門檻", m.lowMemoryThresholdBytes?.let { Format.bytes(it) } ?: Format.UNAVAILABLE)
-                    MetricRow("系統處於低記憶體狀態", if (m.lowMemory) "是" else "否")
+        val reading = live?.memory
+        val m = reading?.valueOrNull()
+        if (m == null) {
+            item { SectionCard { UnavailableText(reading?.unavailableReason() ?: "讀取中…") } }
+        } else {
+            item {
+                HeroCard(
+                    trailing = {
+                        RingGauge(m.usedFraction.toFloat(), MaterialTheme.colorScheme.secondary, centerText = Format.percent(m.usedFraction))
+                    },
+                ) {
+                    HeroLabel("系統記憶體使用中")
+                    HeroValue(Format.bytes(m.usedBytes), large = false)
+                    HeroSubtitle("共 ${Format.bytes(m.totalBytes)}（整台裝置）")
+                    HeroPills {
+                        HeroPill(
+                            if (m.lowMemory) "低記憶體狀態" else "記憶體充足",
+                            if (m.lowMemory) status.danger else status.good,
+                        )
+                    }
+                }
+            }
+            item {
+                StatRow {
+                    StatTile(Modifier.weight(1f), "可用", Format.bytes(m.availableBytes)) {
+                        UsageBar((1 - m.usedFraction).toFloat(), status.good)
+                    }
+                    StatTile(
+                        Modifier.weight(1f), "低記憶體門檻",
+                        m.lowMemoryThresholdBytes?.let { Format.bytes(it) } ?: Format.UNAVAILABLE,
+                    ) { Caption("可用量低於此值時系統開始回收") }
                 }
             }
         }
@@ -101,19 +130,29 @@ fun StorageScreen(vm: MonitorViewModel, onBack: () -> Unit) {
                 WarningBanner("剩餘空間低於 ${settings.lowStoragePercent}%（可於設定調整門檻）。本 App 不會刪除任何檔案，請自行於系統設定管理。")
             }
         }
-        item {
-            SectionCard(title = "內部儲存空間") {
-                if (s == null) {
-                    UnavailableText(reading?.unavailableReason() ?: "讀取中…")
-                } else {
-                    val low = s.freeFraction * 100 < settings.lowStoragePercent
-                    BigValue(Format.bytes(s.freeBytes), if (low) status.warn else MaterialTheme.colorScheme.onSurface)
-                    UsageBar(s.usedFraction.toFloat(), if (low) status.warn else MaterialTheme.colorScheme.primary)
-                    MetricRow("總容量", Format.bytes(s.totalBytes))
-                    MetricRow("已使用（含系統）", Format.bytes(s.usedBytes))
-                    MetricRow("剩餘", Format.bytes(s.freeBytes))
-                    MetricRow("使用比例", Format.percent(s.usedFraction))
-                    MetricRow("資料來源", s.source.label)
+        if (s == null) {
+            item { SectionCard { UnavailableText(reading?.unavailableReason() ?: "讀取中…") } }
+        } else {
+            val low = s.freeFraction * 100 < settings.lowStoragePercent
+            item {
+                val accent = if (low) status.warn else MaterialTheme.colorScheme.primary
+                HeroCard(trailing = { RingGauge(s.usedFraction.toFloat(), accent, centerText = Format.percent(s.usedFraction)) }) {
+                    HeroLabel("內部儲存空間剩餘")
+                    HeroValue(Format.bytes(s.freeBytes), if (low) status.warn else MaterialTheme.colorScheme.onPrimaryContainer, large = false)
+                    HeroSubtitle("共 ${Format.bytes(s.totalBytes)}")
+                    HeroPills { HeroPill(if (low) "空間偏低" else "空間充足", if (low) status.warn else status.good) }
+                    Caption("來源：${s.source.label}", MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                }
+            }
+            item {
+                val accent = if (low) status.warn else MaterialTheme.colorScheme.primary
+                StatRow {
+                    StatTile(Modifier.weight(1f), "已使用（含系統）", Format.bytes(s.usedBytes)) {
+                        UsageBar(s.usedFraction.toFloat(), accent)
+                    }
+                    StatTile(Modifier.weight(1f), "剩餘比例", Format.percent(s.freeFraction)) {
+                        UsageBar(s.freeFraction.toFloat(), status.good)
+                    }
                 }
             }
         }
@@ -133,7 +172,7 @@ fun StorageScreen(vm: MonitorViewModel, onBack: () -> Unit) {
             InfoNote(
                 "總容量與剩餘空間取自 Android StorageStatsManager（與系統設定顯示一致，以 1 GB = 10⁹ bytes 計）。" +
                     "「已使用」是總容量減去剩餘空間，包含 Android 系統本身，因此不等於照片、App 等分類加總。" +
-                    "取得每個 App 的佔用量需要「使用情況存取權」，本 App 刻意不要求此權限，也不提供分類明細或刪除功能。",
+                    "本 App 不提供各 App 佔用量的分類明細，也沒有刪除檔案的功能。",
             )
         }
     }

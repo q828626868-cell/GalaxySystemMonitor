@@ -1,6 +1,21 @@
 package com.galaxy.systemmonitor.ui.screens
 
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Modifier
+import com.galaxy.systemmonitor.ui.components.Caption
+import com.galaxy.systemmonitor.ui.components.HeroCard
+import com.galaxy.systemmonitor.ui.components.HeroLabel
+import com.galaxy.systemmonitor.ui.components.HeroPill
+import com.galaxy.systemmonitor.ui.components.HeroPills
+import com.galaxy.systemmonitor.ui.components.HeroSubtitle
+import com.galaxy.systemmonitor.ui.components.HeroValue
+import com.galaxy.systemmonitor.ui.components.RingGauge
+import com.galaxy.systemmonitor.ui.components.StatColumn
+import com.galaxy.systemmonitor.ui.components.StatRow
+import com.galaxy.systemmonitor.ui.components.StatTile
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -48,45 +63,67 @@ fun TemperatureScreen(vm: MonitorViewModel, onBack: () -> Unit) {
 
     ScreenScaffold(title = "電池溫度", onBack = onBack) {
         item {
-            SectionCard(title = "目前電池溫度") {
-                BigValue(Format.temperature(battery?.temperatureC), status.forTemp(level))
-                StatusChip(level.label, status.forTemp(level))
-                MetricRow("偏高門檻", "${settings.tempWarnC}°C")
-                MetricRow("高溫警告門檻", "${settings.tempHighC}°C")
-                live?.let { MetricRow("更新時間", Format.fullDateTime(it.timestamp)) }
+            val t = battery?.temperatureC
+            val color = status.forTemp(level)
+            HeroCard(
+                trailing = {
+                    // Ring fills toward the high-warning threshold (+10 °C headroom so it never looks "full" too early).
+                    RingGauge(t?.let { (it / (settings.tempHighC + 10)).toFloat() }, color, centerText = level.label)
+                },
+            ) {
+                HeroLabel("目前溫度")
+                HeroValue(Format.temperature(t), color)
+                live?.let { HeroSubtitle("更新於 ${Format.dateTime(it.timestamp)}") }
+                HeroPills {
+                    HeroPill("偏高 ${settings.tempWarnC}°C", status.warn)
+                    HeroPill("高溫 ${settings.tempHighC}°C", status.danger)
+                }
             }
         }
         item {
             SectionCard(title = "近期變化") {
-                listOf(TimeRange.H1, TimeRange.H6, TimeRange.H24).forEach { r ->
-                    val s = TemperatureAnalyzer.windowStats(points, now, r.millis)
-                    if (s == null) {
-                        MetricRow("最近 ${r.label}", Format.INSUFFICIENT)
-                    } else {
-                        MetricRow(
+                val windows = listOf(TimeRange.H1, TimeRange.H6, TimeRange.H24)
+                    .map { it to TemperatureAnalyzer.windowStats(points, now, it.millis) }
+                Row(Modifier.fillMaxWidth()) {
+                    windows.forEach { (r, s) ->
+                        StatColumn(
+                            Modifier.weight(1f),
+                            s?.let { String.format(Locale.US, "%+.1f°C", it.change) } ?: Format.INSUFFICIENT,
                             "最近 ${r.label}",
-                            String.format(Locale.US, "%+.1f°C", s.change),
+                            valueColor = when {
+                                s == null -> MaterialTheme.colorScheme.onSurface
+                                s.change > 0.05 -> status.warn
+                                s.change < -0.05 -> status.good
+                                else -> MaterialTheme.colorScheme.onSurface
+                            },
+                            dim = s == null,
                         )
-                        Text(
-                            String.format(Locale.US, "最低 %.1f / 最高 %.1f / 平均 %.1f°C · ", s.min, s.max, s.average) +
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                windows.forEach { (r, s) ->
+                    if (s != null) {
+                        Caption(
+                            "${r.label}：" +
+                                String.format(Locale.US, "最低 %.1f／最高 %.1f／平均 %.1f°C，", s.min, s.max, s.average) +
                                 "${s.count} 筆（${Format.fullDateTime(s.firstTimestamp)} – ${Format.fullDateTime(s.lastTimestamp)}）",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
             }
         }
         item {
-            SectionCard(title = "保存期間內的最高／最低紀錄") {
-                MetricRow(
-                    "最高",
-                    maxT?.let { "${Format.temperature(it.value / 10.0)}（${Format.fullDateTime(it.timestamp)}）" } ?: "尚無紀錄",
-                )
-                MetricRow(
-                    "最低",
-                    minT?.let { "${Format.temperature(it.value / 10.0)}（${Format.fullDateTime(it.timestamp)}）" } ?: "尚無紀錄",
-                )
+            StatRow {
+                StatTile(
+                    Modifier.weight(1f), "保存期間最高",
+                    maxT?.let { Format.temperature(it.value / 10.0) } ?: "—",
+                    valueColor = status.warn,
+                ) { Caption(maxT?.let { Format.fullDateTime(it.timestamp) } ?: "尚無紀錄") }
+                StatTile(
+                    Modifier.weight(1f), "保存期間最低",
+                    minT?.let { Format.temperature(it.value / 10.0) } ?: "—",
+                    valueColor = MaterialTheme.colorScheme.secondary,
+                ) { Caption(minT?.let { Format.fullDateTime(it.timestamp) } ?: "尚無紀錄") }
             }
         }
         item { RangeSelector(range, { range = it }) }

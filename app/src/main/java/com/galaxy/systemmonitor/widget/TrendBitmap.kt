@@ -2,8 +2,10 @@ package com.galaxy.systemmonitor.widget
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Shader
 import androidx.core.graphics.createBitmap
 import com.galaxy.systemmonitor.domain.ChartPoint
 import com.galaxy.systemmonitor.domain.Series
@@ -62,6 +64,20 @@ object TrendBitmap {
             segment.forEachIndexed { i, p ->
                 if (i == 0) path.moveTo(x(p.timestamp), y(p.value)) else path.lineTo(x(p.timestamp), y(p.value))
             }
+            // Soft gradient area under each continuous segment, matching the in-app charts.
+            val area = Path(path).apply {
+                lineTo(x(segment.last().timestamp), heightPx.toFloat())
+                lineTo(x(segment.first().timestamp), heightPx.toFloat())
+                close()
+            }
+            val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                shader = LinearGradient(
+                    0f, pad, 0f, heightPx.toFloat(),
+                    (lineColor and 0x00FFFFFF) or 0x55000000, lineColor and 0x00FFFFFF,
+                    Shader.TileMode.CLAMP,
+                )
+            }
+            canvas.drawPath(area, fill)
             canvas.drawPath(path, line)
         }
         return bmp

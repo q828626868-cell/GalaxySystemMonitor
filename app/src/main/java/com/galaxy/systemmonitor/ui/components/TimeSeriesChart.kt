@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -112,7 +113,10 @@ fun TimeSeriesChart(
             for (i in 0..2) {
                 val v = yMin + (yMax - yMin) * i / 2f
                 val yy = y(v)
-                drawLine(gridColor, Offset(left, yy), Offset(size.width, yy), strokeWidth = 1f)
+                drawLine(
+                    gridColor.copy(alpha = 0.6f), Offset(left, yy), Offset(size.width, yy), strokeWidth = 1f,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f)),
+                )
                 val label = textMeasurer.measure(valueFormat(v), labelStyle)
                 drawText(label, topLeft = Offset(left - label.size.width - 6.dp.toPx(), yy - label.size.height / 2f))
             }
@@ -146,6 +150,17 @@ fun TimeSeriesChart(
                     seg.forEachIndexed { i, p ->
                         if (i == 0) path.moveTo(x(p.timestamp), y(p.value)) else path.lineTo(x(p.timestamp), y(p.value))
                     }
+                    // Soft area fill under each continuous segment (gaps stay empty).
+                    val area = Path().apply {
+                        addPath(path)
+                        lineTo(x(seg.last().timestamp), top + h)
+                        lineTo(x(seg.first().timestamp), top + h)
+                        close()
+                    }
+                    drawPath(
+                        area,
+                        Brush.verticalGradient(listOf(lineColor.copy(alpha = 0.28f), lineColor.copy(alpha = 0f)), startY = top, endY = top + h),
+                    )
                     drawPath(path, lineColor, style = stroke)
                 }
             }

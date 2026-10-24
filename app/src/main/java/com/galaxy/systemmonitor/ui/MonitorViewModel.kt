@@ -1,5 +1,7 @@
 package com.galaxy.systemmonitor.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -13,22 +15,28 @@ import com.galaxy.systemmonitor.data.db.SampleEntity
 import com.galaxy.systemmonitor.data.db.SampleSource
 import com.galaxy.systemmonitor.data.db.TimedValue
 import com.galaxy.systemmonitor.data.model.BatteryInfo
+import com.galaxy.systemmonitor.data.model.DeviceInfo
+import com.galaxy.systemmonitor.data.model.DeviceLive
 import com.galaxy.systemmonitor.data.model.SystemSnapshot
 import com.galaxy.systemmonitor.data.settings.AppSettings
 import com.galaxy.systemmonitor.data.settings.SettingsRepository
 import com.galaxy.systemmonitor.data.settings.ThemeMode
 import com.galaxy.systemmonitor.data.settings.WidgetStyle
 import com.galaxy.systemmonitor.domain.DrainSummary
+import com.galaxy.systemmonitor.domain.PowerSession
 import com.galaxy.systemmonitor.widget.WidgetUpdater
 import com.galaxy.systemmonitor.work.WorkScheduler
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -57,6 +65,34 @@ class MonitorViewModel(private val app: GalaxyMonitorApp) : ViewModel() {
     val drain: StateFlow<DrainSummary?> = combine(history, _now) { samples, now ->
         samples?.let { DrainSummary.from(it, now) }
     }.flowOn(Dispatchers.Default).state(null)
+
+    /** Polls battery current every 2 s, only while a screen collects it. */
+    val power: StateFlow<PowerSession> = flow {
+        while (true) {
+            emit(container.powerReader.read())
+            delay(PowerSession.POLL_MILLIS)
+        }
+    }.flowOn(Dispatchers.IO)
+        .scan(PowerSession()) { session, info -> session.append(info) }
+        .state(PowerSession())
+
+    /** Static device facts, read once off the main thread; null while loading. */
+    val deviceInfo: StateFlow<DeviceInfo?> = flow { emit(container.deviceInfoReader.readStatic()) }
+        .flowOn(Dispatchers.IO)
+        .stateIn(viewModelScope, SharingStarted.Lazily, null)
+
+    /** CPU frequencies, thermal state and uptime, polled only while a screen collects it. */
+    val deviceLive: StateFlow<DeviceLive?> = flow {
+        while (true) {
+            emit(container.deviceInfoReader.readLive())
+            // Thermal headroom returns NaN when queried more than once per second.
+            delay(DEVICE_POLL_MILLIS)
+        }
+    }.flowOn(Dispatchers.IO).state(null)
+
+    fun hasBatteryStatsPermission(): Boolean =
+        app.checkSelfPermission(Manifest.permission.BATTERY_STATS) == PackageManager.PERMISSION_GRANTED
+    fun hasUsageAccess(): Boolean = container.appUsageReader.hasUsageAccess()
 
     val maxTemperature: StateFlow<TimedValue?> = repo.observeMaxTemperature().state(null)
     val minTemperature: StateFlow<TimedValue?> = repo.observeMinTemperature().state(null)
@@ -152,6 +188,7 @@ class MonitorViewModel(private val app: GalaxyMonitorApp) : ViewModel() {
     companion object {
         private const val HOUR = 3_600_000L
         private const val DAY = 24 * HOUR
+        private const val DEVICE_POLL_MILLIS = 1_500L
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {

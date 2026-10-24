@@ -1,9 +1,11 @@
 package com.galaxy.systemmonitor.data.source
 
+import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.os.BatteryManager
 import android.os.Build
 import androidx.core.content.ContextCompat
@@ -13,7 +15,10 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 
-/** Reads the sticky ACTION_BATTERY_CHANGED broadcast. No permission required. */
+/**
+ * Reads the sticky ACTION_BATTERY_CHANGED broadcast. No permission required, except for the
+ * optional state-of-health value, which needs BATTERY_STATS granted via ADB.
+ */
 class BatteryReader(private val context: Context) {
 
     fun read(): Reading<BatteryInfo> = try {
@@ -63,6 +68,10 @@ class BatteryReader(private val context: Context) {
         } else {
             -1
         }
+        val sohSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+        val sohPermitted = context.checkSelfPermission(Manifest.permission.BATTERY_STATS) ==
+            PackageManager.PERMISSION_GRANTED
+        val soh = if (sohSupported && sohPermitted) readStateOfHealth() else Int.MIN_VALUE
         return BatteryParser.parse(
             BatteryParser.Raw(
                 level = level,
@@ -82,7 +91,24 @@ class BatteryReader(private val context: Context) {
                 health = intent.getIntExtra(BatteryManager.EXTRA_HEALTH, -1),
                 technology = intent.getStringExtra(BatteryManager.EXTRA_TECHNOLOGY),
                 cycleCount = cycle,
+                stateOfHealth = soh,
+                stateOfHealthPermitted = sohPermitted,
+                stateOfHealthSupported = sohSupported,
             ),
         )
+    }
+
+    /** Returns Int.MIN_VALUE when the battery HAL does not implement it or access is refused. */
+    private fun readStateOfHealth(): Int = try {
+        context.getSystemService(BatteryManager::class.java)
+            ?.getIntProperty(BATTERY_PROPERTY_STATE_OF_HEALTH)
+            ?: Int.MIN_VALUE
+    } catch (e: SecurityException) {
+        Int.MIN_VALUE
+    }
+
+    private companion object {
+        /** BatteryManager.BATTERY_PROPERTY_STATE_OF_HEALTH (@SystemApi, API 34). */
+        const val BATTERY_PROPERTY_STATE_OF_HEALTH = 10
     }
 }

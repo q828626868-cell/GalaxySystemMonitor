@@ -3,6 +3,8 @@ package com.galaxy.systemmonitor.data.source
 import com.galaxy.systemmonitor.data.model.BatteryHealth
 import com.galaxy.systemmonitor.data.model.ChargeStatus
 import com.galaxy.systemmonitor.data.model.PlugType
+import com.galaxy.systemmonitor.data.model.unavailableReason
+import com.galaxy.systemmonitor.data.model.valueOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -73,5 +75,33 @@ class BatteryParserTest {
         assertEquals(ChargeStatus.CHARGING, b.status)
         assertEquals(true, b.pluggedIn)
         assertEquals(213, b.cycleCount)
+    }
+
+    @Test
+    fun `zero cycle count is treated as not provided`() {
+        val b = BatteryParser.parse(raw(cycle = 0))
+        assertNull(b.cycleCount)
+        assertTrue(b.notes.isNotEmpty())
+    }
+
+    @Test
+    fun `state of health requires permission`() {
+        val b = BatteryParser.parse(raw().copy(stateOfHealth = 92, stateOfHealthPermitted = false))
+        assertEquals(BatteryParser.SOH_PERMISSION_REASON, b.stateOfHealth.unavailableReason())
+    }
+
+    @Test
+    fun `state of health is parsed when permitted`() {
+        val b = BatteryParser.parse(raw().copy(stateOfHealth = 92, stateOfHealthPermitted = true))
+        assertEquals(92, b.stateOfHealth.valueOrNull())
+    }
+
+    @Test
+    fun `unsupported or abnormal state of health is unavailable`() {
+        val unsupported = BatteryParser.parse(raw().copy(stateOfHealthPermitted = true))
+        assertNull(unsupported.stateOfHealth.valueOrNull())
+        val abnormal = BatteryParser.parse(raw().copy(stateOfHealth = 0, stateOfHealthPermitted = true))
+        assertNull(abnormal.stateOfHealth.valueOrNull())
+        assertTrue(abnormal.notes.isNotEmpty())
     }
 }

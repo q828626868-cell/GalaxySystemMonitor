@@ -25,8 +25,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.galaxy.systemmonitor.Destinations
+import com.galaxy.systemmonitor.ui.screens.AppUsageScreen
 import com.galaxy.systemmonitor.ui.screens.BatteryScreen
 import com.galaxy.systemmonitor.ui.screens.DashboardScreen
+import com.galaxy.systemmonitor.ui.screens.DeviceScreen
 import com.galaxy.systemmonitor.ui.screens.HistoryScreen
 import com.galaxy.systemmonitor.ui.screens.MemoryScreen
 import com.galaxy.systemmonitor.ui.screens.NetworkScreen
@@ -100,6 +102,8 @@ fun AppNavigation(vm: MonitorViewModel, pendingRoute: String?, onRouteHandled: (
             composable(Destinations.MEMORY) { MemoryScreen(vm, back) }
             composable(Destinations.STORAGE) { StorageScreen(vm, back) }
             composable(Destinations.NETWORK) { NetworkScreen(vm, back) }
+            composable(Destinations.APP_USAGE) { AppUsageScreen(back) }
+            composable(Destinations.DEVICE) { DeviceScreen(vm, back) }
             composable(Destinations.HISTORY) { HistoryScreen(vm, onBack = null) }
             composable(Destinations.SETTINGS) { SettingsScreen(vm, onBack = null) }
         }
