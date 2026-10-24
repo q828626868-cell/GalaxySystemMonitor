@@ -2,9 +2,9 @@
 
 [繁體中文](README.md) | **English**
 
-A native Android phone-health monitor written in Kotlin, with home-screen widgets. It reads real battery, memory, storage and network information through public Android APIs only, and keeps its history on the device. No root, no account and no internet permission required.
+A native Android phone-health monitor written in Kotlin, with home-screen widgets. It reads real battery, memory, storage, network and device information through public Android APIs only, and keeps its history on the device. No root, no account and no internet permission required.
 
-> The app was designed with the Samsung Galaxy S25 Ultra (Android 16) as its primary target, but it has **not yet been tested on that physical device**; see [Limitations](#limitations-and-not-yet-implemented). This project is not affiliated with Samsung.
+> The app was designed with the Samsung Galaxy S25 Ultra (Android 16) as its primary target. Its main features have been tested on a physical Galaxy S25 Ultra (Android 16) and Galaxy M14 5G (Android 15); see [Limitations](#limitations-and-not-yet-implemented). This project is not affiliated with Samsung.
 
 ## Table of Contents
 
@@ -28,7 +28,10 @@ A native Android phone-health monitor written in Kotlin, with home-screen widget
 
 | Area | Details |
 |---|---|
-| Battery | Level, charging status, power source, battery temperature, voltage, Android health status, battery technology, charge cycle count (Android 14+ when the device reports it) |
+| Battery | Level, charging status, power source, battery temperature, voltage, Android health status, battery technology, charge cycle count (Android 14+ when the device reports it), battery health percentage (requires an ADB grant) |
+| Live power | While the Battery screen is open: current, voltage, net battery power (W) and fuel-gauge charge (mAh) every 2 seconds, with a 10-minute chart (not stored in the database) |
+| Device info | Model and marketing name, Android / One UI version, security patch, kernel, chipset and per-cluster max frequency, live per-core frequency (where the device allows it), GPU / OpenGL ES / Vulkan, display resolution and refresh rate, HDR, system thermal status, uptime and deep-sleep ratio |
+| App usage | Per-app foreground time and Wi-Fi / mobile / background traffic for today, 24 hours or 7 days (requires Usage access) |
 | Drain / charge rate | Average discharge rate over the last 1, 6 and 24 hours, and average charge rate over the last 1 and 6 hours (percentage points per hour) |
 | Battery temperature | Current value, change over the last 1 / 6 / 24 hours (min, max, average), and the highest / lowest reading within the retention period |
 | System memory | Device total, available, estimated in-use, usage ratio, the system low-memory threshold and state |
@@ -53,8 +56,8 @@ A native Android phone-health monitor written in Kotlin, with home-screen widget
 
 | Widget | Target size | Contents |
 |---|---|---|
-| System Monitor (small) | 4 × 2 | Battery level, battery temperature, drain (or charge) rate, network, free storage (when tall enough), update time |
-| System Monitor (large) | 4 × 4 | Level with progress bar, charging status, temperature and its hint, drain rate, memory, free storage, network, 24-hour battery-level trend, an "Open details" button |
+| System Monitor (small) | 4 × 2 | Four tiles: battery temperature, memory, free storage and network; status shown by color, usage bars for memory and storage, a single row when the widget is short |
+| System Monitor (large) | 4 × 4 | Battery ring, charging status, temperature and health tags, drain (or charge) rate, memory and storage with usage bars, network, 24-hour battery-level trend, an "Open details" button |
 
 - The refresh button in the top-right corner updates the widget manually.
 - Tapping a section opens the matching detail screen in the app.
@@ -73,7 +76,7 @@ Dark mode (system / dark / light), AMOLED black background, widget appearance an
 
 ## Screenshots
 
-> These screenshots were taken on an Android emulator (Pixel 7, Android 17 preview image), **not on a Galaxy S25 Ultra**. Some battery values (level, temperature) were simulated during testing with `adb shell dumpsys battery`. The UI language is Traditional Chinese.
+> **These screenshots show version 1.0.0; the 1.1.0 UI has been redesigned and new screenshots are pending.** They were taken on an Android emulator (Pixel 7, Android 17 preview image), **not on a Galaxy S25 Ultra**. Some battery values (level, temperature) were simulated during testing with `adb shell dumpsys battery`. The UI language is Traditional Chinese.
 
 | Dashboard | Battery | Battery temperature |
 |---|---|---|
@@ -118,7 +121,7 @@ minSdk is 31 because the widget target-cell attributes (`targetCellWidth` / `tar
 
 ### Getting the APK
 
-Download the latest APK (for example `GalaxySystemMonitor-v1.0.0-debug.apk`) from [GitHub Releases](https://github.com/q828626868-cell/GalaxySystemMonitor/releases), or build it yourself as described in [Building from Source](#building-from-source).
+Download the latest APK (for example `GalaxySystemMonitor-v1.1.0-debug.apk`) from [GitHub Releases](https://github.com/q828626868-cell/GalaxySystemMonitor/releases), or build it yourself as described in [Building from Source](#building-from-source). See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
 > The published APK is a **debug build** signed with Android's default debug key; no release signing is configured yet. Each Release page lists the APK's SHA-256 hash so you can verify the file.
 
@@ -138,7 +141,7 @@ ADB is not required to use the app; it is just a convenient way to install from 
 
 ```bash
 adb devices                                              # confirm the device is connected
-adb install -r GalaxySystemMonitor-v1.0.0-debug.apk      # file downloaded from Releases
+adb install -r GalaxySystemMonitor-v1.1.0-debug.apk      # file downloaded from Releases
 # or a locally built file: adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
@@ -169,6 +172,10 @@ No signing key is configured for release builds yet.
 3. **Keep background sampling reliable (recommended on Samsung devices).** System Settings > Apps > Galaxy System Monitor > Battery > set to "Unrestricted", and make sure the app is not in the sleeping or deep-sleeping apps list. The app's Settings screen has a button that opens this page.
 4. **Drain rates need history.** The 1-hour figure needs at least 30 minutes of valid discharge data, the 6-hour figure 1.5 hours, and the 24-hour figure 4 hours; otherwise "insufficient data" is shown.
 5. **Cellular generation (optional).** On the Network screen, tap "Show mobile network type" and grant the Phone permission. Declining does not affect any other feature.
+6. **App usage (optional).** Open "App usage" from the dashboard and turn on Usage access in system settings as prompted, or run `adb shell appops set com.galaxy.systemmonitor GET_USAGE_STATS allow` from a computer.
+7. **Battery health (optional).** This permission cannot be requested in the app. Run `adb shell pm grant com.galaxy.systemmonitor android.permission.BATTERY_STATS` from a computer, then reopen the app.
+
+All optional permissions can be withdrawn at any time: turn Usage access off in system settings, and revoke `BATTERY_STATS` with `adb shell pm revoke`. Uninstalling the app removes both. Granting through ADB is **not root** and does not affect Knox or the warranty; USB debugging can be turned off afterwards and the grant stays in effect.
 
 ## Privacy and Permissions
 
@@ -177,10 +184,14 @@ No signing key is configured for release builds yet.
 | `ACCESS_NETWORK_STATE` | Required (normal permission, granted at install) | Read connection state and type |
 | `READ_PHONE_STATE` | Optional (requested at runtime) | Only used to read the cellular data network type (4G / 5G) |
 | `WAKE_LOCK`, `RECEIVE_BOOT_COMPLETED` | Added by WorkManager | Run scheduled sampling and restore the schedule after reboot |
+| `BATTERY_STATS` | Optional (can only be granted through ADB) | Only used to read the battery health percentage |
+| `PACKAGE_USAGE_STATS` | Optional (Usage access in system settings, or ADB) | Per-app foreground time and traffic on the App usage screen |
+| `QUERY_ALL_PACKAGES` | Granted at install | Show app names and icons instead of package names / UIDs in the usage statistics |
 
 - **No `INTERNET` permission**: the app cannot send data anywhere.
 - History is stored only in the app's private database; cloud backup and device-to-device transfer are disabled.
-- The app does not access photos, files or other apps' data, and has no cleaning, boosting or file-deletion features.
+- The app does not access photos, files, contacts or the content of other apps, and has no cleaning, boosting or file-deletion features.
+- With Usage access granted, the app reads per-app usage time and traffic statistics and only displays them on the phone; they are not stored in the database.
 
 See [SECURITY_REPORT.md](SECURITY_REPORT.md) (Traditional Chinese) for the detailed review notes.
 
@@ -189,11 +200,11 @@ See [SECURITY_REPORT.md](SECURITY_REPORT.md) (Traditional Chinese) for the detai
 ```
 app/src/main/java/com/galaxy/systemmonitor/
 ├── data/
-│   ├── source/      System readers (battery, memory, storage, network)
+│   ├── source/      System readers (battery, live current, memory, storage, network, device info, app usage)
 │   ├── db/          Room entities, DAOs, mapping
 │   ├── settings/    DataStore settings
 │   └── MonitorRepository.kt
-├── domain/          Drain-rate calculation, temperature analysis, chart series
+├── domain/          Drain-rate calculation, temperature analysis, chart series, screen-time calculation, CPU cluster parsing
 ├── work/            WorkManager sampling job, network change watcher
 ├── widget/          Glance small / large widgets
 └── ui/              Compose screens, components, theme, navigation
@@ -206,24 +217,30 @@ app/src/main/java/com/galaxy/systemmonitor/
 ./gradlew :app:connectedDebugAndroidTest    # requires a device or emulator
 ```
 
+> `connectedDebugAndroidTest` uninstalls the app when it finishes, which clears its history and any granted permissions. On a phone you use day to day, install the test APK with `adb install -t` and run it with `adb shell am instrument` instead.
+
 | Type | Count | Coverage |
 |---|---|---|
-| Unit tests | 27 | Battery value parsing and rejection, drain-rate algorithm, temperature levels, chart gap splitting, settings validation, formatting |
+| Unit tests | 49 | Battery value and health parsing, rejection of abnormal values, current unit conversion and power, drain-rate algorithm, app screen-time calculation, CPU cluster and frequency parsing, model / chipset name lookup, temperature levels, chart gap splitting, settings validation, formatting |
 | Instrumented tests | 7 | Real system API reads, Room null columns, capture / throttle / prune / clear flow, widget destination whitelist |
 
-All of these tests pass on an Android emulator.
+All 1.1.0 unit tests pass. The instrumented-test result is from 1.0.0 on an Android emulator; they have not been re-run for 1.1.0.
 
 ## Limitations and Not Yet Implemented
 
-- **Not yet tested on a physical Galaxy S25 Ultra / Android 16 / One UI.** Temperature, voltage, cycle count and background-restriction behaviour on Samsung devices still need to be confirmed on real hardware.
-- **Battery health percentage (maximum capacity) is not shown.** Android's `BATTERY_PROPERTY_STATE_OF_HEALTH` requires a system-level permission that regular apps cannot hold, so the app neither shows nor estimates it.
+- **Limited real-device coverage.** Battery, live power, health and app usage were confirmed on a Galaxy S25 Ultra (Android 16) and a Galaxy M14 5G (Android 15 / One UI 7); the Device info screen, the new UI and the widgets were only checked on the Galaxy M14 5G. Long-term background sampling under Samsung battery management still needs observation.
+- **Charge cycle count is usually unavailable on Samsung devices.** Both tested Galaxy phones report the standard `EXTRA_CYCLE_COUNT` as 0, so the app shows "not provided" instead of 0. Samsung's internal usage counter can only be viewed from a computer with `adb shell dumpsys battery`; system security rules prevent regular apps from reading it.
+- **Battery health percentage (maximum capacity) requires an ADB grant.** Android 14's `BATTERY_PROPERTY_STATE_OF_HEALTH` requires the `BATTERY_STATS` permission; run `adb shell pm grant com.galaxy.systemmonitor android.permission.BATTERY_STATS` to enable it. Some devices' battery drivers do not report this value, and the app never estimates it. The value comes from Samsung's driver (it matches `mSavedBatteryBsoh` in `dumpsys battery`) and may differ from other Samsung internal figures.
+- **Live power is the net power at the battery** (battery voltage × current), not the charger's output. Around 80% with battery protection on, charging is switched on and off and individual readings can swing sharply.
+- **Live CPU frequency depends on the device.** Some devices do not let regular apps read it; only the per-cluster maximum is shown then. Regular apps also cannot read CPU usage since Android 8.
+- **Marketing and chipset names** come from a built-in lookup table; unlisted devices show the raw code.
 - The drain rate is a change in battery percentage, limited by whole-percent resolution; it is not electrical power.
 - Background sampling times are decided by the system and may be delayed or stopped by Doze, battery saver or Samsung battery management.
 - Network changes that occur while the app process is not running are only detected at the next sample.
 - Android 16 and later may delay battery broadcasts that only change the temperature, so temperature updates can lag slightly.
 - The UI is currently available in Traditional Chinese only.
 - The published APK is a debug build (debug-key signed, not minified) and is not suitable for app-store distribution.
-- Not yet implemented: proper release signing, network latency testing, notifications, data export.
+- Not yet implemented: proper release signing, network latency testing, notifications, data export, long-term battery health trend.
 
 ## Developer and License
 
